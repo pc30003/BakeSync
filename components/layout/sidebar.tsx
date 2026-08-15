@@ -37,7 +37,7 @@ export function Sidebar({ user, open, onClose }: SidebarProps) {
       const json = await res.json();
       return json.data?.snapshot ?? null;
     },
-    refetchInterval: 60_000,
+    refetchInterval: 2_000,
   });
 
   const badgeCounts: Record<string, number> = {
