@@ -90,6 +90,39 @@ export async function POST(req: NextRequest) {
             where: { id: parsed.data.ingredientId },
             data:  { stockGrams: newStock, alertLevel },
           });
+
+          // Auto-generate procurement recommendation if below reorder threshold
+          if (newStock <= Number(ingredient.reorderThresholdGrams)) {
+            // Check if there's already a pending recommendation for this ingredient
+            const existingRec = await tx.procurementRecommendation.findFirst({
+              where: {
+                ingredientId: parsed.data.ingredientId,
+                bakeryId:     session!.user.bakeryId,
+                approvedAt:   null,
+                dismissedAt:  null,
+              },
+            });
+
+            if (!existingRec) {
+              const shortfall = Number(ingredient.reorderThresholdGrams) - newStock;
+              const orderGrams = shortfall * 1.5; // 50% buffer
+              const urgency = alertLevel === "OUT_OF_STOCK" ? "CRITICAL" : alertLevel === "CRITICAL" ? "HIGH" : "MEDIUM";
+
+              await tx.procurementRecommendation.create({
+                data: {
+                  bakeryId:              session!.user.bakeryId,
+                  ingredientId:          parsed.data.ingredientId,
+                  currentStockGrams:     newStock,
+                  requiredGrams:         Number(ingredient.reorderThresholdGrams),
+                  shortfallGrams:        shortfall,
+                  recommendedOrderGrams: orderGrams,
+                  supplierId:            ingredient.supplierId,
+                  estimatedCost:         Number(ingredient.costPerKg) > 0 ? (orderGrams / 1000) * Number(ingredient.costPerKg) : null,
+                  urgency,
+                },
+              });
+            }
+          }
         }
       }
 
