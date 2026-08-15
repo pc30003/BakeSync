@@ -5,7 +5,7 @@ import { startOfDay, endOfDay, subDays } from "date-fns";
 
 // GET /api/analytics — KPI snapshot + recent trends
 export async function GET(req: NextRequest) {
-  const { session, response } = await requireAuth(["HEAD_BAKER"]);
+  const { session, response } = await requireAuth();
   if (response) return response;
 
   try {
