@@ -14,11 +14,11 @@ import { existsSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT      = resolve(__dirname, "..");
-const SRC       = resolve(ROOT, "public/icons/logo-source.jpeg");
+const SRC       = resolve(ROOT, "public/icons/BakeSync App Logo.png");
 const OUT_DIR   = resolve(ROOT, "public/icons");
 
 if (!existsSync(SRC)) {
-  console.error("❌  Source logo not found at public/icons/logo-source.jpeg");
+  console.error("❌  Source logo not found at public/icons/BakeSync App Logo.png");
   process.exit(1);
 }
 
