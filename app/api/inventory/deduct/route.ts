@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { ok, notFound, serverError, validationError, requireAuth, error } from "@/lib/api-helpers";
+import { computeAlertLevel, handleStockChange } from "@/lib/stock-actions";
 
 const DeductSchema = z.object({
   ingredientId: z.string(),
@@ -60,6 +61,14 @@ export async function POST(req: NextRequest) {
         data:  { stockGrams: newStock, alertLevel },
       }),
     ]);
+
+    // Auto-generate alerts and procurement recommendations
+    await handleStockChange({
+      ingredientId: parsed.data.ingredientId,
+      bakeryId:     session!.user.bakeryId,
+      newStock,
+      alertLevel:   alertLevel as "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK",
+    });
 
     return ok({ deduction, newStockGrams: newStock, alertLevel });
   } catch (err) {

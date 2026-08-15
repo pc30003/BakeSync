@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { ok, created, serverError, validationError, requireAuth } from "@/lib/api-helpers";
+import { computeAlertLevel, handleStockChange } from "@/lib/stock-actions";
 
 const WastageSchema = z.object({
   ingredientId: z.string().nullable().optional(),
@@ -55,81 +56,58 @@ export async function POST(req: NextRequest) {
     const parsed = WastageSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const result = await db.$transaction(async (tx) => {
-      // Create the wastage log
-      const log = await tx.wastageLog.create({
+    let newStock = 0;
+    let alertLevel: "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK" = "OK";
+
+    const log = await db.$transaction(async (tx) => {
+      const wastageLog = await tx.wastageLog.create({
         data: {
-          bakeryId:     session!.user.bakeryId,
-          ingredientId: parsed.data.ingredientId ?? null,
-          productId:    parsed.data.productId ?? null,
-          productName:  parsed.data.productName ?? null,
+          bakeryId:      session!.user.bakeryId,
+          ingredientId:  parsed.data.ingredientId ?? null,
+          productId:     parsed.data.productId ?? null,
+          productName:   parsed.data.productName ?? null,
           quantityGrams: parsed.data.quantityGrams,
-          reason:       parsed.data.reason,
-          shiftDate:    new Date(parsed.data.shiftDate),
-          loggedById:   session!.user.id,
+          reason:        parsed.data.reason,
+          shiftDate:     new Date(parsed.data.shiftDate),
+          loggedById:    session!.user.id,
         },
       });
 
-      // If an ingredient was selected, deduct stock
+      // Deduct stock if ingredient selected
       if (parsed.data.ingredientId) {
         const ingredient = await tx.ingredient.findUnique({
           where: { id: parsed.data.ingredientId },
         });
 
         if (ingredient) {
-          const newStock = Math.max(0, Number(ingredient.stockGrams) - parsed.data.quantityGrams);
-
-          // Determine new alert level
-          type AlertLevel = "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK";
-          let alertLevel: AlertLevel = "OK";
-          if (newStock <= 0) alertLevel = "OUT_OF_STOCK";
-          else if (newStock <= Number(ingredient.criticalThresholdGrams)) alertLevel = "CRITICAL";
-          else if (newStock <= Number(ingredient.reorderThresholdGrams)) alertLevel = "LOW";
+          newStock = Math.max(0, Number(ingredient.stockGrams) - parsed.data.quantityGrams);
+          alertLevel = computeAlertLevel(
+            newStock,
+            Number(ingredient.criticalThresholdGrams),
+            Number(ingredient.reorderThresholdGrams)
+          );
 
           await tx.ingredient.update({
             where: { id: parsed.data.ingredientId },
             data:  { stockGrams: newStock, alertLevel },
           });
-
-          // Auto-generate procurement recommendation if below reorder threshold
-          if (newStock <= Number(ingredient.reorderThresholdGrams)) {
-            // Check if there's already a pending recommendation for this ingredient
-            const existingRec = await tx.procurementRecommendation.findFirst({
-              where: {
-                ingredientId: parsed.data.ingredientId,
-                bakeryId:     session!.user.bakeryId,
-                approvedAt:   null,
-                dismissedAt:  null,
-              },
-            });
-
-            if (!existingRec) {
-              const shortfall = Number(ingredient.reorderThresholdGrams) - newStock;
-              const orderGrams = shortfall * 1.5; // 50% buffer
-              const urgency = alertLevel === "OUT_OF_STOCK" ? "CRITICAL" : alertLevel === "CRITICAL" ? "HIGH" : "MEDIUM";
-
-              await tx.procurementRecommendation.create({
-                data: {
-                  bakeryId:              session!.user.bakeryId,
-                  ingredientId:          parsed.data.ingredientId,
-                  currentStockGrams:     newStock,
-                  requiredGrams:         Number(ingredient.reorderThresholdGrams),
-                  shortfallGrams:        shortfall,
-                  recommendedOrderGrams: orderGrams,
-                  supplierId:            ingredient.supplierId,
-                  estimatedCost:         Number(ingredient.costPerKg) > 0 ? (orderGrams / 1000) * Number(ingredient.costPerKg) : null,
-                  urgency,
-                },
-              });
-            }
-          }
         }
       }
 
-      return log;
+      return wastageLog;
     });
 
-    return created(result);
+    // After transaction: generate alerts and procurement recommendations
+    if (parsed.data.ingredientId) {
+      await handleStockChange({
+        ingredientId: parsed.data.ingredientId,
+        bakeryId:     session!.user.bakeryId,
+        newStock,
+        alertLevel,
+      });
+    }
+
+    return created(log);
   } catch (err) {
     return serverError(err);
   }

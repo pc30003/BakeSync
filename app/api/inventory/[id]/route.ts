@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { ok, notFound, serverError, validationError, requireAuth } from "@/lib/api-helpers";
+import { handleStockChange } from "@/lib/stock-actions";
 
 const UpdateIngredientSchema = z.object({
   name: z.string().min(1).optional(),
@@ -63,6 +64,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await db.ingredient.update({
       where: { id: params.id },
       data: { ...parsed.data, alertLevel },
+    });
+
+    // Auto-generate alerts and procurement recommendations
+    await handleStockChange({
+      ingredientId: params.id,
+      bakeryId:     session!.user.bakeryId,
+      newStock,
+      alertLevel:   alertLevel as "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK",
     });
 
     return ok(updated);
