@@ -123,6 +123,12 @@ export const NAV_SECTIONS: NavSection[] = [
         icon:  "Settings",
         roles: ["HEAD_BAKER"],
       },
+      {
+        label: "Billing",
+        href:  "/dashboard/billing",
+        icon:  "CreditCard",
+        roles: ["HEAD_BAKER"],
+      },
     ],
   },
 ];

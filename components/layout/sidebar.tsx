@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, CalendarDays, ClipboardCheck, BookOpen,
   ShoppingBag, Package, Trash2, ShoppingCart, Truck,
-  BarChart3, X, ChevronRight, Bot, Settings,
+  BarChart3, X, ChevronRight, Bot, Settings, CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavForRole, getRoleLabel } from "./nav-config";
@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   LayoutDashboard, CalendarDays, ClipboardCheck, BookOpen,
-  ShoppingBag, Package, Trash2, ShoppingCart, Truck, BarChart3, Bot, Settings,
+  ShoppingBag, Package, Trash2, ShoppingCart, Truck, BarChart3, Bot, Settings, CreditCard,
 };
 
 interface SidebarProps {
