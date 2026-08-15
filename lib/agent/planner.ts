@@ -13,9 +13,13 @@
 import OpenAI from "openai";
 import type { AgentBakeryContext, AgentSchedulePlan, AgentPlannedBatch } from "./types";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o";
 
@@ -120,7 +124,7 @@ const CREATE_SCHEDULE_FUNCTION: OpenAI.Chat.ChatCompletionTool = {
 export async function runPlanner(context: AgentBakeryContext): Promise<AgentSchedulePlan> {
   const userMessage = buildUserMessage(context);
 
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: MODEL,
     temperature: 0.2,   // low temperature — we want deterministic scheduling logic
     max_tokens: 4096,
