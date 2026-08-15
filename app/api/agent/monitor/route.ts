@@ -129,7 +129,7 @@ async function runMonitorForBakery(bakeryId: string) {
           shortfallGrams:        Math.max(0, reorder - current),
           recommendedOrderGrams: order,
           supplierId:            ing.supplierId,
-          estimatedCost:         ing.costPerKg > 0 ? (order / 1000) * Number(ing.costPerKg) : null,
+          estimatedCost:         Number(ing.costPerKg) > 0 ? (order / 1000) * Number(ing.costPerKg) : null,
           urgency:               ing.alertLevel === "OUT_OF_STOCK" ? "CRITICAL" : "HIGH",
         },
       });
