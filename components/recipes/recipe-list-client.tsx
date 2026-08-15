@@ -306,7 +306,10 @@ export function RecipeListClient({ initialRecipes, isHeadBaker }: RecipeListClie
                     isOptional:    i.isOptional,
                     notes:         i.notes,
                   })),
-                  stages:               editTarget.stages,
+                  stages:               editTarget.stages.map((s) => ({
+                    ...s,
+                    type: s.type as any,
+                  })),
                 }
               : undefined
           }
