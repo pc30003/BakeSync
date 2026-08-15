@@ -80,7 +80,8 @@ export async function POST(req: NextRequest) {
           const newStock = Math.max(0, Number(ingredient.stockGrams) - parsed.data.quantityGrams);
 
           // Determine new alert level
-          let alertLevel = "OK";
+          type AlertLevel = "OK" | "LOW" | "CRITICAL" | "OUT_OF_STOCK";
+          let alertLevel: AlertLevel = "OK";
           if (newStock <= 0) alertLevel = "OUT_OF_STOCK";
           else if (newStock <= Number(ingredient.criticalThresholdGrams)) alertLevel = "CRITICAL";
           else if (newStock <= Number(ingredient.reorderThresholdGrams)) alertLevel = "LOW";
