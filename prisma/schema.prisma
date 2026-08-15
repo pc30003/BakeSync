@@ -1,0 +1,660 @@
+// BakeSync — Prisma Schema
+// Database: PostgreSQL
+// ORM: Prisma 5
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// AUTH & USERS
+// ─────────────────────────────────────────────
+
+enum BakeryPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+model Bakery {
+  id                 String      @id @default(cuid())
+  name               String
+  timezone           String      @default("Europe/London")
+  openingTime        String      @default("05:00")
+  closingTime        String      @default("20:00")
+  currency           String      @default("GBP")
+  // Billing
+  plan               BakeryPlan  @default(FREE)
+  stripeCustomerId   String?     @unique
+  subscriptionStatus String?     // "active" | "past_due" | "canceled" | "trialing"
+  trialEndsAt        DateTime?
+  // Onboarding
+  isOnboarded        Boolean     @default(false)
+  ovenCount          Int         @default(2)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  users                    User[]
+  recipes                  Recipe[]
+  ingredients              Ingredient[]
+  suppliers                Supplier[]
+  orders                   Order[]
+  productionSchedules      ProductionSchedule[]
+  agentActions             AgentAction[]
+  agentAlerts              AgentAlert[]
+  procurementRecommendations ProcurementRecommendation[]
+  wastageLogs              WastageLog[]
+  stockDeductions          StockDeduction[]
+  ovenCapacityBlocks       OvenCapacityBlock[]
+  taskQueue                TaskQueue[]
+
+  @@map("bakeries")
+}
+
+enum UserRole {
+  HEAD_BAKER
+  FLOOR_STAFF
+  PURCHASING_MANAGER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?   // bcrypt hash — null for OAuth-only users
+  role          UserRole  @default(FLOOR_STAFF)
+  bakeryId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  bakery              Bakery               @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  accounts            Account[]
+  sessions            Session[]
+  approvedProcurements ProcurementRecommendation[] @relation("ApprovedBy")
+  approvedSchedules   ProductionSchedule[]         @relation("ApprovedBy")
+  completedChecklists ChecklistItem[]              @relation("CompletedBy")
+  stockDeductions     StockDeduction[]             @relation("LoggedBy")
+  wastageLogs         WastageLog[]                 @relation("LoggedBy")
+
+  @@map("users")
+}
+
+// NextAuth adapter models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ─────────────────────────────────────────────
+// ORDERS
+// ─────────────────────────────────────────────
+
+enum OrderChannel {
+  ECOMMERCE
+  WHOLESALE
+  EVENT_BOOKING
+  SUBSCRIPTION
+  POS
+  MANUAL
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  READY
+  FULFILLED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  bakeryId        String
+  externalId      String?                    // ID from source system
+  channel         OrderChannel
+  status          OrderStatus @default(PENDING)
+  customerName    String?
+  customerEmail   String?
+  fulfilmentDate  DateTime
+  totalValue      Decimal     @db.Decimal(10, 2)
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  bakery    Bakery          @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  lineItems OrderLineItem[]
+
+  @@index([bakeryId, fulfilmentDate])
+  @@index([bakeryId, status])
+  @@map("orders")
+}
+
+model OrderLineItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  productId   String
+  productName String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  notes       String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_line_items")
+}
+
+// ─────────────────────────────────────────────
+// RECIPES
+// ─────────────────────────────────────────────
+
+enum RecipeCategory {
+  BREAD
+  PASTRY
+  CAKE
+  BISCUIT
+  VIENNOISERIE
+  SAVOURY
+  OTHER
+}
+
+enum RecipeStageType {
+  MIX
+  AUTOLYSE
+  BULK_FERMENT
+  SHAPE
+  PROOF
+  RETARD
+  BAKE
+  COOL
+  FINISH
+  PACK
+}
+
+model Recipe {
+  id                   String         @id @default(cuid())
+  bakeryId             String
+  name                 String
+  category             RecipeCategory
+  description          String?        @db.Text
+  yieldQuantity        Int
+  yieldUnit            String         @default("pieces")
+  batchSizeMultiplier  Decimal        @default(1) @db.Decimal(6, 2)
+  wastageBufferPercent Decimal        @default(3) @db.Decimal(5, 2)
+  shelfLifeHours       Int            @default(24)
+  isActive             Boolean        @default(true)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  bakery           Bakery            @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  ingredients      RecipeIngredient[]
+  stages           RecipeStage[]
+  productionBatches ProductionBatch[]
+
+  @@index([bakeryId, isActive])
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id             String  @id @default(cuid())
+  recipeId       String
+  ingredientId   String
+  quantityGrams  Decimal @db.Decimal(10, 3)  // always stored in grams
+  displayUnit    String  @default("g")
+  isOptional     Boolean @default(false)
+  notes          String?
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+  @@map("recipe_ingredients")
+}
+
+model RecipeStage {
+  id              String          @id @default(cuid())
+  recipeId        String
+  order           Int
+  type            RecipeStageType
+  name            String
+  durationMinutes Int
+  requiresOven    Boolean         @default(false)
+  ovenTempCelsius Int?
+  notes           String?
+
+  recipe         Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  checklistItems ChecklistItem[]
+
+  @@index([recipeId, order])
+  @@map("recipe_stages")
+}
+
+// ─────────────────────────────────────────────
+// INVENTORY
+// ─────────────────────────────────────────────
+
+enum IngredientCategory {
+  FLOUR
+  GRAIN
+  DAIRY
+  FAT
+  SWEETENER
+  LEAVENING
+  EGG
+  FRUIT
+  NUT
+  CHOCOLATE
+  SPICE
+  SALT
+  LIQUID
+  PACKAGING
+  OTHER
+}
+
+enum StockAlertLevel {
+  OK
+  LOW
+  CRITICAL
+  OUT_OF_STOCK
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  bakeryId     String
+  name         String
+  contactEmail String?
+  contactPhone String?
+  leadTimeDays Int      @default(1)
+  notes        String?  @db.Text
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bakery      Bakery       @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  ingredients Ingredient[]
+  lots        IngredientLot[]
+  procurements ProcurementRecommendation[]
+
+  @@map("suppliers")
+}
+
+model Ingredient {
+  id                     String             @id @default(cuid())
+  bakeryId               String
+  name                   String
+  category               IngredientCategory
+  unit                   String             @default("g")
+  stockGrams             Decimal            @default(0) @db.Decimal(12, 3)
+  reorderThresholdGrams  Decimal            @db.Decimal(12, 3)
+  criticalThresholdGrams Decimal            @db.Decimal(12, 3)
+  costPerKg              Decimal            @default(0) @db.Decimal(10, 2)
+  supplierId             String?
+  alertLevel             StockAlertLevel    @default(OK)
+  isTracked              Boolean            @default(true)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  bakery           Bakery             @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  supplier         Supplier?          @relation(fields: [supplierId], references: [id])
+  lots             IngredientLot[]
+  recipeUsages     RecipeIngredient[]
+  stockDeductions  StockDeduction[]
+  wastageLogs      WastageLog[]
+  procurements     ProcurementRecommendation[]
+
+  @@index([bakeryId, alertLevel])
+  @@map("ingredients")
+}
+
+model IngredientLot {
+  id            String    @id @default(cuid())
+  ingredientId  String
+  supplierId    String?
+  lotCode       String?
+  quantityGrams Decimal   @db.Decimal(12, 3)
+  expiryDate    DateTime?
+  receivedAt    DateTime  @default(now())
+  costPerKg     Decimal   @db.Decimal(10, 2)
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  supplier   Supplier?  @relation(fields: [supplierId], references: [id])
+
+  // FEFO ordering: sort by expiryDate ASC when consuming stock
+  @@index([ingredientId, expiryDate])
+  @@map("ingredient_lots")
+}
+
+model StockDeduction {
+  id             String   @id @default(cuid())
+  bakeryId       String
+  ingredientId   String
+  quantityGrams  Decimal  @db.Decimal(12, 3)
+  reason         String   // PRODUCTION | WASTAGE | SPOILAGE | ADJUSTMENT | STOCKTAKE
+  referenceId    String?  // e.g. productionBatchId
+  loggedById     String
+  loggedAt       DateTime @default(now())
+
+  bakery     Bakery     @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  loggedBy   User       @relation("LoggedBy", fields: [loggedById], references: [id])
+
+  @@index([bakeryId, loggedAt])
+  @@map("stock_deductions")
+}
+
+model ProcurementRecommendation {
+  id                     String    @id @default(cuid())
+  bakeryId               String
+  ingredientId           String
+  currentStockGrams      Decimal   @db.Decimal(12, 3)
+  requiredGrams          Decimal   @db.Decimal(12, 3)
+  shortfallGrams         Decimal   @db.Decimal(12, 3)
+  recommendedOrderGrams  Decimal   @db.Decimal(12, 3)
+  supplierId             String?
+  estimatedCost          Decimal?  @db.Decimal(10, 2)
+  urgency                String    @default("MEDIUM") // LOW | MEDIUM | HIGH | CRITICAL
+  generatedAt            DateTime  @default(now())
+  approvedAt             DateTime?
+  approvedById           String?
+  dismissedAt            DateTime?
+
+  bakery     Bakery     @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  supplier   Supplier?  @relation(fields: [supplierId], references: [id])
+  approvedBy User?      @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([bakeryId, urgency])
+  @@map("procurement_recommendations")
+}
+
+model WastageLog {
+  id             String    @id @default(cuid())
+  bakeryId       String
+  ingredientId   String?
+  productId      String?
+  productName    String?
+  quantityGrams  Decimal   @db.Decimal(12, 3)
+  reason         String
+  loggedById     String
+  shiftDate      DateTime
+  createdAt      DateTime  @default(now())
+
+  bakery     Bakery      @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  ingredient Ingredient? @relation(fields: [ingredientId], references: [id])
+  loggedBy   User        @relation("LoggedBy", fields: [loggedById], references: [id])
+
+  @@index([bakeryId, shiftDate])
+  @@map("wastage_logs")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCTION SCHEDULING
+// ─────────────────────────────────────────────
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  EVENING
+  OVERNIGHT
+}
+
+enum ProductionBatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  BLOCKED
+}
+
+enum ChecklistItemStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  SKIPPED
+}
+
+model ProductionSchedule {
+  id                          String    @id @default(cuid())
+  bakeryId                    String
+  scheduleDate                DateTime  @db.Date
+  shiftType                   ShiftType
+  isAutoGenerated             Boolean   @default(true)
+  isApproved                  Boolean   @default(false)
+  approvedById                String?
+  approvedAt                  DateTime?
+  totalOvenUtilizationPercent Decimal   @default(0) @db.Decimal(5, 2)
+  aiNotes                     String?   @db.Text
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  bakery     Bakery            @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  approvedBy User?             @relation("ApprovedBy", fields: [approvedById], references: [id])
+  batches    ProductionBatch[]
+
+  @@unique([bakeryId, scheduleDate, shiftType])
+  @@index([bakeryId, scheduleDate])
+  @@map("production_schedules")
+}
+
+model ProductionBatch {
+  id               String                @id @default(cuid())
+  scheduleId       String
+  recipeId         String
+  shiftType        ShiftType
+  status           ProductionBatchStatus @default(SCHEDULED)
+  quantity         Int
+  scaleFactor      Decimal               @db.Decimal(8, 3)
+  plannedStartTime DateTime
+  plannedEndTime   DateTime
+  actualStartTime  DateTime?
+  actualEndTime    DateTime?
+  ovenSlots        Int                   @default(1)
+  notes            String?               @db.Text
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  schedule  ProductionSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  recipe    Recipe             @relation(fields: [recipeId], references: [id])
+  checklist ChecklistItem[]
+  assignedStaff BatchStaffAssignment[]
+
+  @@index([scheduleId])
+  @@map("production_batches")
+}
+
+model BatchStaffAssignment {
+  id      String @id @default(cuid())
+  batchId String
+  userId  String
+
+  batch ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, userId])
+  @@map("batch_staff_assignments")
+}
+
+model ChecklistItem {
+  id          String              @id @default(cuid())
+  batchId     String
+  stageId     String?
+  order       Int
+  description String
+  status      ChecklistItemStatus @default(PENDING)
+  completedById String?
+  completedAt DateTime?
+  notes       String?
+
+  batch       ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  stage       RecipeStage?    @relation(fields: [stageId], references: [id])
+  completedBy User?           @relation("CompletedBy", fields: [completedById], references: [id])
+
+  @@index([batchId, order])
+  @@map("checklist_items")
+}
+
+model OvenCapacityBlock {
+  id        String    @id @default(cuid())
+  bakeryId  String
+  startTime DateTime
+  endTime   DateTime
+  batchId   String?
+  isBlocked Boolean   @default(false)
+  notes     String?
+
+  bakery Bakery @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+
+  @@index([bakeryId, startTime])
+  @@map("oven_capacity_blocks")
+}
+
+// ─────────────────────────────────────────────
+// AI AGENT ACTIONS & ALERTS
+// ─────────────────────────────────────────────
+
+enum AgentActionType {
+  GENERATE_SCHEDULE
+  FLAG_SHORTFALL
+  PROCUREMENT_RECOMMENDATION
+  DEMAND_FORECAST
+  WASTE_ALERT
+  EXPIRY_ALERT
+  SCHEDULE_OVERRIDE
+}
+
+enum AgentActionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  DISMISSED
+}
+
+model AgentAction {
+  id               String            @id @default(cuid())
+  bakeryId         String
+  type             AgentActionType
+  status           AgentActionStatus @default(PENDING)
+  summary          String
+  details          Json
+  requiresApproval Boolean           @default(false)
+  approvedById     String?
+  approvedAt       DateTime?
+  dismissedById    String?
+  dismissedAt      DateTime?
+  triggeredAt      DateTime          @default(now())
+  completedAt      DateTime?
+  errorMessage     String?           @db.Text
+
+  bakery Bakery @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+
+  @@index([bakeryId, status])
+  @@index([bakeryId, triggeredAt])
+  @@map("agent_actions")
+}
+
+model AgentAlert {
+  id                String   @id @default(cuid())
+  bakeryId          String
+  type              String   // SHORTFALL | EXPIRY | OVERPRODUCTION | DELAY | PROCUREMENT
+  severity          String   // INFO | WARNING | CRITICAL
+  title             String
+  message           String   @db.Text
+  relatedEntityId   String?
+  relatedEntityType String?
+  isRead            Boolean  @default(false)
+  isDismissed       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  bakery Bakery @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+
+  @@index([bakeryId, isDismissed, createdAt])
+  @@map("agent_alerts")
+}
+
+// ─────────────────────────────────────────────
+// CONTINUOUS TASK QUEUE
+// ─────────────────────────────────────────────
+// Persistent task queue so the agent can schedule
+// work that survives server restarts and runs
+// continuously across all bakeries.
+
+enum TaskType {
+  MONITOR_BAKERY           // proactive stock/expiry/demand check
+  GENERATE_SCHEDULE        // AI schedule generation
+  RETRY_FAILED_ACTION      // re-run a failed AgentAction
+  SEND_ALERT_DIGEST        // email daily summary to head baker
+  RECOMPUTE_STOCK_ALERTS   // recalculate all alertLevel values
+}
+
+enum TaskStatus {
+  PENDING     // waiting to be picked up
+  RUNNING     // currently executing
+  COMPLETED   // finished successfully
+  FAILED      // failed after maxRetries attempts
+  CANCELLED   // manually cancelled
+}
+
+model TaskQueue {
+  id           String     @id @default(cuid())
+  bakeryId     String
+  type         TaskType
+  status       TaskStatus @default(PENDING)
+  payload      Json       @default("{}")
+  priority     Int        @default(5)     // 1 = highest, 10 = lowest
+  attempts     Int        @default(0)
+  maxAttempts  Int        @default(3)
+  scheduledFor DateTime   @default(now()) // run no earlier than this time
+  startedAt    DateTime?
+  completedAt  DateTime?
+  errorMessage String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  bakery Bakery @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+
+  @@index([status, scheduledFor, priority])  // the worker query index
+  @@index([bakeryId, type, status])
+  @@map("task_queue")
+}

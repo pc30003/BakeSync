@@ -1,0 +1,27 @@
+{
+  "crons": [
+    {
+      "path": "/api/agent/monitor",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/agent/tasks",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/agent/tasks?type=SEND_ALERT_DIGEST",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/agent/tasks?type=RECOMPUTE_STOCK_ALERTS",
+      "schedule": "*/15 * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/agent/stream/route.ts":   { "maxDuration": 60 },
+    "app/api/agent/run/route.ts":      { "maxDuration": 60 },
+    "app/api/schedules/route.ts":      { "maxDuration": 60 },
+    "app/api/agent/tasks/route.ts":    { "maxDuration": 60 },
+    "app/api/agent/monitor/route.ts":  { "maxDuration": 60 }
+  }
+}
