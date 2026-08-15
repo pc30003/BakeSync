@@ -30,11 +30,11 @@ export function BakeSyncLogo({ variant = "icon", size = "md", className }: BakeS
   const px = iconSizes[size];
   return (
     <Image
-      src="/icons/logo-source.jpeg"
+      src="/icons/BakeSync App Logo.png"
       alt="BakeSync"
       width={px}
       height={px}
-      className={cn("object-contain rounded", className)}
+      className={cn("object-contain rounded-lg", className)}
       priority
     />
   );
