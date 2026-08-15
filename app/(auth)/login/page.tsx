@@ -15,7 +15,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center flex flex-col items-center gap-2">
-          <BakeSyncLogo variant="full" size="lg" className="mx-auto" />
+          <BakeSyncLogo variant="full" size="xl" className="mx-auto" />
           <p className="text-muted-foreground text-sm">
             {IS_DEMO
               ? "Autonomous AI for commercial kitchens · Competition Demo"

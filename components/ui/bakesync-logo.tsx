@@ -2,25 +2,39 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface BakeSyncLogoProps {
-  /** Show just the icon mark, or the full lockup */
+  /** "icon" = bs mark only (sidebar), "full" = full logo with text (login page) */
   variant?: "icon" | "full";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
-const iconSizes = { sm: 32, md: 40, lg: 56 };
-const fullSizes = { sm: 100, md: 140, lg: 200 };
+const iconSizes = { sm: 32, md: 40, lg: 56, xl: 80 };
+const fullSizes = { sm: 160, md: 220, lg: 300, xl: 400 };
 
 export function BakeSyncLogo({ variant = "icon", size = "md", className }: BakeSyncLogoProps) {
-  const px = variant === "icon" ? iconSizes[size] : fullSizes[size];
+  if (variant === "full") {
+    const px = fullSizes[size];
+    return (
+      <Image
+        src="/icons/BakeSync_Logo.png"
+        alt="BakeSync"
+        width={px}
+        height={Math.round(px * 0.42)}
+        className={cn("object-contain", className)}
+        priority
+      />
+    );
+  }
 
+  // Icon mark only — used in sidebar
+  const px = iconSizes[size];
   return (
     <Image
       src="/icons/logo-source.jpeg"
       alt="BakeSync"
       width={px}
-      height={variant === "icon" ? px : Math.round(px * 0.45)}
-      className={cn("object-contain", className)}
+      height={px}
+      className={cn("object-contain rounded", className)}
       priority
     />
   );
