@@ -55,20 +55,47 @@ export async function POST(req: NextRequest) {
     const parsed = WastageSchema.safeParse(body);
     if (!parsed.success) return validationError(parsed.error);
 
-    const log = await db.wastageLog.create({
-      data: {
-        bakeryId:     session!.user.bakeryId,
-        ingredientId: parsed.data.ingredientId ?? null,
-        productId:    parsed.data.productId ?? null,
-        productName:  parsed.data.productName ?? null,
-        quantityGrams: parsed.data.quantityGrams,
-        reason:       parsed.data.reason,
-        shiftDate:    new Date(parsed.data.shiftDate),
-        loggedById:   session!.user.id,
-      },
+    const result = await db.$transaction(async (tx) => {
+      // Create the wastage log
+      const log = await tx.wastageLog.create({
+        data: {
+          bakeryId:     session!.user.bakeryId,
+          ingredientId: parsed.data.ingredientId ?? null,
+          productId:    parsed.data.productId ?? null,
+          productName:  parsed.data.productName ?? null,
+          quantityGrams: parsed.data.quantityGrams,
+          reason:       parsed.data.reason,
+          shiftDate:    new Date(parsed.data.shiftDate),
+          loggedById:   session!.user.id,
+        },
+      });
+
+      // If an ingredient was selected, deduct stock
+      if (parsed.data.ingredientId) {
+        const ingredient = await tx.ingredient.findUnique({
+          where: { id: parsed.data.ingredientId },
+        });
+
+        if (ingredient) {
+          const newStock = Math.max(0, Number(ingredient.stockGrams) - parsed.data.quantityGrams);
+
+          // Determine new alert level
+          let alertLevel = "OK";
+          if (newStock <= 0) alertLevel = "OUT_OF_STOCK";
+          else if (newStock <= Number(ingredient.criticalThresholdGrams)) alertLevel = "CRITICAL";
+          else if (newStock <= Number(ingredient.reorderThresholdGrams)) alertLevel = "LOW";
+
+          await tx.ingredient.update({
+            where: { id: parsed.data.ingredientId },
+            data:  { stockGrams: newStock, alertLevel },
+          });
+        }
+      }
+
+      return log;
     });
 
-    return created(log);
+    return created(result);
   } catch (err) {
     return serverError(err);
   }
