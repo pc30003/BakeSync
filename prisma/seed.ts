@@ -1,9 +1,12 @@
 import { PrismaClient, UserRole, RecipeCategory, RecipeStageType, IngredientCategory, OrderChannel, OrderStatus, ShiftType } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding BakeSync database...");
+
+  const demoPassword = await bcrypt.hash("demo1234", 10);
 
   // ── Bakery ──────────────────────────────────────────────────────────────
   const bakery = await prisma.bakery.upsert({
@@ -23,33 +26,36 @@ async function main() {
   // ── Users ────────────────────────────────────────────────────────────────
   const headBaker = await prisma.user.upsert({
     where: { email: "head@artisanloaf.com" },
-    update: {},
+    update: { password: demoPassword },
     create: {
       email: "head@artisanloaf.com",
       name: "Sarah Chen",
       role: UserRole.HEAD_BAKER,
+      password: demoPassword,
       bakeryId: bakery.id,
     },
   });
 
   const floorStaff = await prisma.user.upsert({
     where: { email: "floor@artisanloaf.com" },
-    update: {},
+    update: { password: demoPassword },
     create: {
       email: "floor@artisanloaf.com",
       name: "Marcus Webb",
       role: UserRole.FLOOR_STAFF,
+      password: demoPassword,
       bakeryId: bakery.id,
     },
   });
 
   const purchasingManager = await prisma.user.upsert({
     where: { email: "purchasing@artisanloaf.com" },
-    update: {},
+    update: { password: demoPassword },
     create: {
       email: "purchasing@artisanloaf.com",
       name: "Priya Patel",
       role: UserRole.PURCHASING_MANAGER,
+      password: demoPassword,
       bakeryId: bakery.id,
     },
   });
