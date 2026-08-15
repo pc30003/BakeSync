@@ -141,8 +141,8 @@ export async function POST(req: NextRequest) {
         totalValue:    148.50,
         lineItems: {
           create: [
-            { productName: "Classic Sourdough Loaf", quantity: 12, unitPrice: 7.50 },
-            { productName: "Butter Croissant",        quantity: 24, unitPrice: 2.25 },
+            { productId: "prod_sourdough",  productName: "Classic Sourdough Loaf", quantity: 12, unitPrice: 7.50 },
+            { productId: "prod_croissant",  productName: "Butter Croissant",        quantity: 24, unitPrice: 2.25 },
           ],
         },
       },
