@@ -9,9 +9,9 @@ interface StockLevelBarProps {
 }
 
 export function StockLevelBar({ current, reorder, critical, label, className }: StockLevelBarProps) {
-  // Use 2x reorder as "full" for display purposes
-  const full = reorder * 2;
-  const pct  = Math.min(100, (current / full) * 100);
+  // "Full" is the higher of 2x reorder or current stock — so the bar never looks under-filled after restock
+  const full = Math.max(reorder * 2, current);
+  const pct  = full > 0 ? Math.min(100, (current / full) * 100) : 0;
 
   const color =
     current <= 0       ? "bg-gray-300" :
