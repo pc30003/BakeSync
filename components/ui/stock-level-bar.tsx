@@ -9,9 +9,16 @@ interface StockLevelBarProps {
 }
 
 export function StockLevelBar({ current, reorder, critical, label, className }: StockLevelBarProps) {
-  // "Full" is the higher of 2x reorder or current stock — so the bar never looks under-filled after restock
-  const full = Math.max(reorder * 2, current);
-  const pct  = full > 0 ? Math.min(100, (current / full) * 100) : 0;
+  // If stock is above reorder (healthy), show bar as nearly full
+  // If below reorder, scale against reorder threshold to show how depleted it is
+  let pct: number;
+  if (current >= reorder) {
+    pct = 100;
+  } else if (current <= 0) {
+    pct = 0;
+  } else {
+    pct = (current / reorder) * 100;
+  }
 
   const color =
     current <= 0       ? "bg-gray-300" :
@@ -32,7 +39,7 @@ export function StockLevelBar({ current, reorder, critical, label, className }: 
         role="progressbar"
         aria-valuenow={current}
         aria-valuemin={0}
-        aria-valuemax={full}
+        aria-valuemax={reorder}
         aria-label={label ? `${label}: ${formatGrams(current)}` : formatGrams(current)}
       >
         <div
