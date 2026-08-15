@@ -171,7 +171,7 @@ export async function PATCH(
             if (!existingRec) {
               const shortfall    = reorder - newStock;
               const orderGrams   = shortfall * 1.25;  // 25% buffer
-              const estimatedCost = ingredient.costPerKg > 0
+              const estimatedCost = Number(ingredient.costPerKg) > 0
                 ? (orderGrams / 1000) * Number(ingredient.costPerKg)
                 : null;
 

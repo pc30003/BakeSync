@@ -130,7 +130,7 @@ export async function writeSchedule(
       });
 
       const currentStock    = Number(ingredient.stockGrams);
-      const estimatedCost   = ingredient.costPerKg > 0
+      const estimatedCost   = Number(ingredient.costPerKg) > 0
         ? (s.shortfallGrams / 1000) * Number(ingredient.costPerKg)
         : null;
 
