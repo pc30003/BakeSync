@@ -4,9 +4,6 @@ const withPWA = require("next-pwa")({
   disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
-  // Merge our custom SW (push notifications, background sync)
-  customWorkerDir: "public",
-  customWorkerSrc: "sw-custom.js",
   // Cache strategies
   runtimeCaching: [
     {
