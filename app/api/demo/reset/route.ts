@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         { bakeryId: bakery.id, name: "Whole Milk",          category: IngredientCategory.DAIRY,  unit: "ml", stockGrams: 8000,  reorderThresholdGrams: 5000,  criticalThresholdGrams: 2000,  alertLevel: "OK",       supplierId: null },
         { bakeryId: bakery.id, name: "Fine Sea Salt",       category: IngredientCategory.OTHER,  unit: "g",  stockGrams: 2000,  reorderThresholdGrams: 1000,  criticalThresholdGrams: 500,   alertLevel: "OK",       supplierId: null },
         { bakeryId: bakery.id, name: "Instant Dried Yeast", category: IngredientCategory.OTHER,  unit: "g",  stockGrams: 500,   reorderThresholdGrams: 300,   criticalThresholdGrams: 100,   alertLevel: "OK",       supplierId: null },
-        { bakeryId: bakery.id, name: "Caster Sugar",        category: IngredientCategory.SUGAR,  unit: "g",  stockGrams: 4000,  reorderThresholdGrams: 2000,  criticalThresholdGrams: 1000,  alertLevel: "OK",       supplierId: null },
+        { bakeryId: bakery.id, name: "Caster Sugar",        category: IngredientCategory.SWEETENER,  unit: "g",  stockGrams: 4000,  reorderThresholdGrams: 2000,  criticalThresholdGrams: 1000,  alertLevel: "OK",       supplierId: null },
         { bakeryId: bakery.id, name: "Free Range Eggs",     category: IngredientCategory.DAIRY,  unit: "g",  stockGrams: 600,   reorderThresholdGrams: 1200,  criticalThresholdGrams: 600,   alertLevel: "CRITICAL", supplierId: null },
       ],
     });
