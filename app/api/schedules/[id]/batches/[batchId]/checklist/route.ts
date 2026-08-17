@@ -33,6 +33,26 @@ export async function PATCH(
       return ok({ error: "Schedule must be approved before checklist items can be updated" });
     }
 
+    // Enforce sequential order — all previous items must be DONE or SKIPPED
+    if (parsed.data.status === "DONE" || parsed.data.status === "IN_PROGRESS") {
+      const previousItems = await db.checklistItem.findMany({
+        where: {
+          batchId: params.batchId,
+          order:   { lt: item.order },
+        },
+        select: { status: true, order: true },
+        orderBy: { order: "asc" },
+      });
+
+      const allPreviousDone = previousItems.every(
+        (prev) => prev.status === "DONE" || prev.status === "SKIPPED"
+      );
+
+      if (!allPreviousDone) {
+        return ok({ error: "Complete the previous steps first" });
+      }
+    }
+
     const isDone = parsed.data.status === "DONE";
 
     const updated = await db.checklistItem.update({
