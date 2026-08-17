@@ -30,13 +30,11 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const nextWeek = addDays(now, 7);
 
-    // Get current stock levels
     const ingredients = await db.ingredient.findMany({
       where: { bakeryId, isTracked: true },
       include: { supplier: { select: { name: true, leadTimeDays: true } } },
     });
 
-    // Get upcoming orders
     const upcomingOrders = await db.order.findMany({
       where: {
         bakeryId,
@@ -46,7 +44,6 @@ export async function POST(req: NextRequest) {
       include: { lineItems: true },
     });
 
-    // Get recipes to understand demand
     const recipes = await db.recipe.findMany({
       where: { bakeryId, isActive: true },
       include: { ingredients: { include: { ingredient: { select: { name: true } } } } },
@@ -95,7 +92,6 @@ export async function POST(req: NextRequest) {
       parsed = { summary: content, recommendations: [], riskAlert: "Unable to parse" };
     }
 
-    // Record as agent action
     await db.agentAction.create({
       data: {
         bakeryId,

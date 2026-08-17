@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
     });
     if (!alert) return notFound("Alert");
 
-    // Get related context
     let relatedContext = "";
     if (alert.relatedEntityId && alert.relatedEntityType === "Ingredient") {
       const ingredient = await db.ingredient.findUnique({
@@ -50,7 +49,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get upcoming orders for demand context
     const upcomingOrders = await db.order.count({
       where: {
         bakeryId: session!.user.bakeryId,
@@ -83,7 +81,6 @@ export async function POST(req: NextRequest) {
       result = { explanation: content, impact: "Unable to assess", actions: [], priority: "TODAY" };
     }
 
-    // Mark alert as read
     await db.agentAlert.update({
       where: { id: alert.id },
       data: { isRead: true },

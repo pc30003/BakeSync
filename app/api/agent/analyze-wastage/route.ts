@@ -2,7 +2,6 @@
  * POST /api/agent/analyze-wastage
  *
  * AI analyses recent wastage patterns and returns insights + suggestions.
- * Called from the analytics page.
  */
 
 import { NextRequest } from "next/server";
@@ -30,7 +29,6 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const last30 = subDays(now, 30);
 
-    // Get wastage logs from last 30 days
     const wastageLogs = await db.wastageLog.findMany({
       where: { bakeryId, shiftDate: { gte: last30 } },
       include: {
@@ -44,10 +42,11 @@ export async function POST(req: NextRequest) {
       return ok({
         analysis: "No wastage data recorded in the last 30 days. Start logging wastage to receive AI-powered insights.",
         suggestions: [],
+        topIssue: "",
+        estimatedSavings: "",
       });
     }
 
-    // Build context for AI
     const wastageContext = wastageLogs.map(log => ({
       ingredient: log.ingredient?.name ?? "Unknown product",
       category: log.ingredient?.category ?? "OTHER",
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
       parsed = { analysis: content, suggestions: [], topIssue: "Unable to parse", estimatedSavings: "N/A" };
     }
 
-    // Record as agent action
     await db.agentAction.create({
       data: {
         bakeryId,
