@@ -144,7 +144,11 @@ export default async function SchedulePage() {
             </CardHeader>
 
             <CardContent className="p-0">
-              {schedule.batches.length === 0 ? (
+              {!schedule.isApproved && !isHead ? (
+                <p className="px-5 py-6 text-sm text-muted-foreground text-center">
+                  This schedule is awaiting Head Baker approval. Checklists will appear once approved.
+                </p>
+              ) : schedule.batches.length === 0 ? (
                 <p className="px-5 py-4 text-sm text-muted-foreground">
                   No batches in this schedule.
                 </p>

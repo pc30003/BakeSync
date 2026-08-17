@@ -18,6 +18,7 @@ export default async function FloorStaffDashboard() {
   const todaySchedule = await db.productionSchedule.findFirst({
     where: {
       bakeryId,
+      isApproved: true,
       scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
     },
     include: {
