@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate, formatGrams, formatCurrency } from "@/lib/utils";
 import { ShoppingCart, AlertTriangle, Truck, Package } from "lucide-react";
 import { ProcurementApproveButton } from "@/components/purchasing/approve-button";
+import { AIProcurementButton } from "@/components/agent/ai-procurement-button";
 
 export const metadata: Metadata = { title: "Procurement Dashboard" };
 
@@ -136,6 +137,9 @@ export default async function PurchasingDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI Procurement Intelligence */}
+      <AIProcurementButton />
     </div>
   );
 }

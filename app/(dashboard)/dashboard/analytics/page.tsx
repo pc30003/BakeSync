@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatGrams, formatCurrency } from "@/lib/utils";
 import { BarChart3, TrendingDown, Package, Zap } from "lucide-react";
 import { subDays, startOfDay } from "date-fns";
+import { AIWastageButton } from "@/components/agent/ai-wastage-button";
 
 export const metadata: Metadata = { title: "Analytics" };
 
@@ -175,6 +176,9 @@ export default async function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Analysis */}
+      <AIWastageButton />
     </div>
   );
 }
