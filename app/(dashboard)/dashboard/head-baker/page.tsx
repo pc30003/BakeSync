@@ -14,6 +14,8 @@ import { startOfDay, endOfDay } from "date-fns";
 
 export const metadata: Metadata = { title: "Head Baker Dashboard" };
 
+export const revalidate = 2;
+
 export default async function HeadBakerDashboard() {
   const session = await auth();
   const bakeryId = session!.user.bakeryId;

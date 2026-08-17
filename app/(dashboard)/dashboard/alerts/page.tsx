@@ -11,6 +11,8 @@ import { subDays } from "date-fns";
 
 export const metadata: Metadata = { title: "Agent Activity" };
 
+export const revalidate = 2;
+
 export default async function AgentActivityPage() {
   const session  = await auth();
   const bakeryId = session!.user.bakeryId;

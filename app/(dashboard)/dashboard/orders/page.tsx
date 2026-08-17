@@ -9,6 +9,8 @@ import type { OrderStatus, OrderChannel } from "@/types";
 
 export const metadata: Metadata = { title: "Orders" };
 
+export const revalidate = 2;
+
 const statusVariant: Record<OrderStatus, string> = {
   PENDING:      "warning",
   CONFIRMED:    "info",

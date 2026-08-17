@@ -12,6 +12,8 @@ import { AIProcurementButton } from "@/components/agent/ai-procurement-button";
 
 export const metadata: Metadata = { title: "Procurement Dashboard" };
 
+export const revalidate = 2;
+
 export default async function PurchasingDashboard() {
   const session = await auth();
   const bakeryId = session!.user.bakeryId;

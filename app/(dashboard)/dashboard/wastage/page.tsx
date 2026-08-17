@@ -9,6 +9,8 @@ import { subDays, startOfDay } from "date-fns";
 
 export const metadata: Metadata = { title: "Log Wastage" };
 
+export const revalidate = 2;
+
 export default async function WastagePage() {
   const session   = await auth();
   const bakeryId  = session!.user.bakeryId;

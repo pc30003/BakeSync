@@ -80,7 +80,7 @@ export function AlertPoller() {
     }
 
     poll();
-    const id = setInterval(poll, 5000);
+    const id = setInterval(poll, 2000);
     return () => { mounted = false; clearInterval(id); };
   }, []);
 

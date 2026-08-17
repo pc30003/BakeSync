@@ -5,6 +5,8 @@ import { RecipeListClient } from "@/components/recipes/recipe-list-client";
 
 export const metadata: Metadata = { title: "Recipes" };
 
+export const revalidate = 2;
+
 export default async function RecipesPage() {
   const session = await auth();
   const bakeryId = session!.user.bakeryId;

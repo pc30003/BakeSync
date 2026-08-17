@@ -9,6 +9,8 @@ import { formatGrams, formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Inventory" };
 
+export const revalidate = 2;
+
 const alertVariant: Record<string, string> = {
   OK:            "success",
   LOW:           "warning",

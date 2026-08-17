@@ -11,6 +11,8 @@ import { AIWastageButton } from "@/components/agent/ai-wastage-button";
 
 export const metadata: Metadata = { title: "Analytics" };
 
+export const revalidate = 2;
+
 export default async function AnalyticsPage() {
   const session  = await auth();
   const bakeryId = session!.user.bakeryId;

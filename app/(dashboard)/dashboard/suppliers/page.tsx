@@ -8,6 +8,8 @@ import { Truck, Mail, Phone, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Suppliers" };
 
+export const revalidate = 2;
+
 export default async function SuppliersPage() {
   const session   = await auth();
   const suppliers = await db.supplier.findMany({
