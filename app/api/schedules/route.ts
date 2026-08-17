@@ -34,12 +34,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const from = searchParams.get("from");
-    const to   = searchParams.get("to");
+    const from     = searchParams.get("from");
+    const to       = searchParams.get("to");
+    const approved = searchParams.get("approved");
 
     const schedules = await db.productionSchedule.findMany({
       where: {
         bakeryId: session!.user.bakeryId,
+        ...(approved === "true" && { isApproved: true }),
         ...(from || to ? {
           scheduleDate: {
             ...(from && { gte: new Date(from) }),

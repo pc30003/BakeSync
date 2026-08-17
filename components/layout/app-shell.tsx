@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { TopBar } from "./top-bar";
 import { DemoBanner } from "./demo-banner";
+import { ToastContainer } from "@/components/ui/toast-notification";
+import { AlertPoller } from "@/components/agent/alert-poller";
 import type { SessionUser } from "@/types";
 
 const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
@@ -47,6 +49,11 @@ export function AppShell({ user, children }: AppShellProps) {
           </main>
         </div>
       </div>
+
+      {/* Toast notifications */}
+      <ToastContainer />
+      {/* Poll for new alerts and show toasts */}
+      <AlertPoller />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Menu, Bell, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Menu, Bell, LogOut, ExternalLink } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -13,7 +14,19 @@ interface TopBarProps {
   onMenuClick: () => void;
 }
 
+interface AlertData {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  type: string;
+  createdAt: string;
+}
+
 export function TopBar({ user, onMenuClick }: TopBarProps) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
   const { data: alerts } = useQuery({
     queryKey: ["alerts-unread"],
     queryFn: async () => {
@@ -25,7 +38,26 @@ export function TopBar({ user, onMenuClick }: TopBarProps) {
     refetchInterval: 2_000,
   });
 
-  const unreadCount = (alerts as any[])?.length ?? 0;
+  const unreadAlerts = (alerts as AlertData[]) ?? [];
+  const unreadCount = unreadAlerts.length;
+
+  // Close panel when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setPanelOpen(false);
+      }
+    }
+    if (panelOpen) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [panelOpen]);
+
+  const severityColor = (s: string) =>
+    s === "CRITICAL" ? "bg-red-500" :
+    s === "WARNING"  ? "bg-amber-500" :
+    "bg-blue-500";
 
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border bg-card/95 backdrop-blur-sm">
@@ -43,20 +75,69 @@ export function TopBar({ user, onMenuClick }: TopBarProps) {
 
       {/* Right: alerts + user */}
       <div className="flex items-center gap-2">
-        {/* Alert bell */}
-        <Link
-          href="/dashboard/alerts"
-          className="relative p-2 rounded-lg hover:bg-muted transition-colors tap-target"
-          aria-label={`${unreadCount} unread alerts`}
-        >
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive"
-              aria-hidden="true"
-            />
+        {/* Alert bell with dropdown */}
+        <div className="relative" ref={panelRef}>
+          <button
+            onClick={() => setPanelOpen(!panelOpen)}
+            className="relative p-2 rounded-lg hover:bg-muted transition-colors tap-target"
+            aria-label={`${unreadCount} unread alerts`}
+            aria-expanded={panelOpen}
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute top-1.5 right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-white"
+                aria-hidden="true"
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Dropdown panel */}
+          {panelOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 max-h-96 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-fade-in">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <p className="text-sm font-semibold text-foreground">Notifications</p>
+                <span className="text-xs text-muted-foreground">{unreadCount} unread</span>
+              </div>
+
+              {/* Alert list */}
+              <div className="overflow-y-auto max-h-72">
+                {unreadAlerts.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                    No new notifications
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-border" role="list">
+                    {unreadAlerts.slice(0, 8).map((alert) => (
+                      <li key={alert.id} className="px-4 py-3 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <span className={cn("w-2 h-2 rounded-full mt-1.5 shrink-0", severityColor(alert.severity))} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{alert.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{alert.message}</p>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Footer link */}
+              <Link
+                href="/dashboard/alerts"
+                onClick={() => setPanelOpen(false)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-border text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+              >
+                View all alerts
+                <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
           )}
-        </Link>
+        </div>
 
         {/* User avatar + sign out */}
         <div className="flex items-center gap-1">
