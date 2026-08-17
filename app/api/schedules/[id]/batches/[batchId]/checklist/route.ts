@@ -24,8 +24,14 @@ export async function PATCH(
 
     const item = await db.checklistItem.findFirst({
       where: { id: parsed.data.itemId, batchId: params.batchId },
+      include: { batch: { include: { schedule: { select: { isApproved: true } } } } },
     });
     if (!item) return notFound("Checklist item");
+
+    // Don't allow ticking items on unapproved schedules
+    if (!item.batch.schedule.isApproved) {
+      return ok({ error: "Schedule must be approved before checklist items can be updated" });
+    }
 
     const isDone = parsed.data.status === "DONE";
 
