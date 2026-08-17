@@ -14,8 +14,8 @@ export const metadata: Metadata = { title: "Production Schedule" };
 // Default to MORNING shift for the agent panel
 const DEFAULT_SHIFT = "MORNING";
 
-// Revalidate every 5 seconds so checklist progress updates for Head Baker
-export const revalidate = 5;
+// Revalidate every 2 seconds so checklist progress updates for Head Baker
+export const revalidate = 2;
 
 export default async function SchedulePage() {
   const session  = await auth();
