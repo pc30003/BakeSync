@@ -10,6 +10,9 @@ import { FloorShiftChecklist } from "@/components/floor/shift-checklist";
 
 export const metadata: Metadata = { title: "My Shift" };
 
+// Revalidate every 5 seconds so approved schedules appear quickly
+export const revalidate = 5;
+
 export default async function FloorStaffDashboard() {
   const session = await auth();
   const bakeryId = session!.user.bakeryId;
