@@ -8,7 +8,7 @@ const WastageSchema = z.object({
   ingredientId: z.string().nullable().optional(),
   productId: z.string().nullable().optional(),
   productName: z.string().nullable().optional(),
-  quantityGrams: z.number().positive(),
+  quantityGrams: z.number().positive().max(100000, "Maximum 100kg per entry"),
   reason: z.string().min(1),
   shiftDate: z.string().datetime(),
 });
@@ -80,7 +80,11 @@ export async function POST(req: NextRequest) {
         });
 
         if (ingredient) {
-          newStock = Math.max(0, Number(ingredient.stockGrams) - parsed.data.quantityGrams);
+          // Can't waste more than what's in stock
+          const currentStock = Number(ingredient.stockGrams);
+          const wasteAmount = Math.min(parsed.data.quantityGrams, currentStock);
+
+          newStock = Math.max(0, currentStock - wasteAmount);
           alertLevel = computeAlertLevel(
             newStock,
             Number(ingredient.criticalThresholdGrams),

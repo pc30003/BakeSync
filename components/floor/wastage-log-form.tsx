@@ -119,6 +119,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
           name="quantityGrams"
           type="number"
           min="0"
+          max="100000"
           step="1"
           required
           value={form.quantityGrams}
