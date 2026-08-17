@@ -62,12 +62,29 @@ export async function writeSchedule(
     // Delete any existing batches for this schedule (clean regeneration)
     await db.productionBatch.deleteMany({ where: { scheduleId: schedule.id } });
 
+    // Build a lookup map: recipeId AND recipe name → actual DB recipeId
+    const recipeMap = new Map<string, string>();
+    for (const r of context.recipes) {
+      recipeMap.set(r.recipeId, r.recipeId);
+      recipeMap.set(r.name.toLowerCase(), r.recipeId);
+    }
+
     // ── 2. Create batches + checklists ───────────────────────────────────────
     for (const batch of plan.batches) {
+      // Resolve recipe ID — AI might return the actual ID or the recipe name
+      const resolvedRecipeId = recipeMap.get(batch.recipeId)
+        ?? recipeMap.get(batch.recipeName?.toLowerCase() ?? "")
+        ?? null;
+
+      if (!resolvedRecipeId) {
+        // Skip batches with unrecognized recipes
+        continue;
+      }
+
       const createdBatch = await db.productionBatch.create({
         data: {
           scheduleId:       schedule.id,
-          recipeId:         batch.recipeId,
+          recipeId:         resolvedRecipeId,
           shiftType:        shiftType as any,
           status:           "SCHEDULED",
           quantity:         Math.round(batch.quantity),
