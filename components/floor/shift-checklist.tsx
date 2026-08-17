@@ -23,6 +23,10 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  const done = items.filter((i) => i.status === "DONE").length;
+  const total = items.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
   async function toggle(item: ChecklistItemData) {
     const newStatus = item.status === "DONE" ? "PENDING" : "DONE";
     setUpdatingId(item.id);
@@ -58,7 +62,19 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
   }
 
   return (
-    <ul className="divide-y divide-border" role="list" aria-label="Batch checklist">
+    <div>
+      {/* Progress bar */}
+      <div className="px-5 py-3 border-b border-border">
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+          <span>{done}/{total} steps completed</span>
+          <span>{pct}%</span>
+        </div>
+        <div className="h-2 bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      <ul className="divide-y divide-border" role="list" aria-label="Batch checklist">
       {items.map((item, index) => {
         const isDone    = item.status === "DONE";
         const isLoading = updatingId === item.id && isPending;
@@ -108,5 +124,6 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         );
       })}
     </ul>
+    </div>
   );
 }
