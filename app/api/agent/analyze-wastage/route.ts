@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     await db.agentAction.create({
       data: {
         bakeryId,
-        type: "WASTAGE_ANALYSIS",
+        type: "WASTE_ALERT",
         status: "COMPLETED",
         summary: `Analyzed ${wastageLogs.length} wastage entries (${totalWasteKg} kg)`,
         details: parsed,
