@@ -10,8 +10,8 @@ export function formatGrams(grams: number): string {
   return `${grams.toFixed(0)} g`;
 }
 
-export function formatCurrency(amount: number, currency = "GBP"): string {
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
+export function formatCurrency(amount: number, currency = "USD"): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }
 
 export function formatDate(date: Date | string): string {

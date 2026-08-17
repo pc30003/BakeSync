@@ -18,7 +18,7 @@ async function main() {
       timezone: "Europe/London",
       openingTime: "05:30",
       closingTime: "18:00",
-      currency: "GBP",
+      currency: "USD",
       ovenCount: 3,
       isOnboarded: true,
     },

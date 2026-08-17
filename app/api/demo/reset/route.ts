@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         timezone:    "Europe/London",
         openingTime: "05:30",
         closingTime: "18:00",
-        currency:    "GBP",
+        currency:    "USD",
         isOnboarded: true,
         ovenCount:   2,
       },
