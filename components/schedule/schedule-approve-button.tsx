@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,8 +19,10 @@ export function ScheduleApproveButton({
 }: ScheduleApproveButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [localApproved, setLocalApproved] = useState(isApproved);
-  const [localApprovedBy, setLocalApprovedBy] = useState(approvedBy);
+
+  // Always use props as source of truth (resets when page re-renders after regeneration)
+  const localApproved = isApproved;
+  const localApprovedBy = approvedBy;
 
   async function toggle() {
     startTransition(async () => {
@@ -30,9 +32,6 @@ export function ScheduleApproveButton({
         body:    JSON.stringify({ approved: !localApproved }),
       });
       if (res.ok) {
-        const json = await res.json();
-        setLocalApproved(!localApproved);
-        setLocalApprovedBy(json.data?.approvedBy?.name ?? null);
         router.refresh();
       }
     });
