@@ -23,37 +23,24 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Demo mode: one-click role cards shown first */}
+        {/* Demo mode: one-click role cards only */}
         {IS_DEMO && (
           <div className="bg-card rounded-2xl border border-amber-200 p-5 shadow-sm">
             <DemoLoginButtons />
           </div>
         )}
 
-        {/* Divider when both options visible */}
-        {IS_DEMO && (
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-3 bg-[#FFFBEB] text-xs text-muted-foreground">
-                or sign in with credentials
-              </span>
-            </div>
-          </div>
-        )}
-
-        <LoginForm />
-
-        {/* Production mode: link to sign up */}
+        {/* Production mode: credential form + sign up link */}
         {!IS_DEMO && (
-          <p className="text-center text-xs text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-primary font-medium hover:underline">
-              Create your bakery
-            </Link>
-          </p>
+          <>
+            <LoginForm />
+            <p className="text-center text-xs text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-primary font-medium hover:underline">
+                Create your bakery
+              </Link>
+            </p>
+          </>
         )}
 
         {/* Demo mode: small print */}
