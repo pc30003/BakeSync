@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
 import { startOfDay, endOfDay } from "date-fns";
 import { FloorShiftChecklist } from "@/components/floor/shift-checklist";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 export const metadata: Metadata = { title: "My Shift" };
 
@@ -44,6 +45,7 @@ export default async function FloorStaffDashboard() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh interval={3000} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — your shift overview`}
