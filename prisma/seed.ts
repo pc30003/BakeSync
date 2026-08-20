@@ -133,7 +133,10 @@ async function main() {
   const almondFlour = await prisma.ingredient.create({
     data: { bakeryId: bakery.id, name: "Almond Flour (Ground)", category: IngredientCategory.NUT, unit: "kg", stockGrams: 3000, reorderThresholdGrams: 2000, criticalThresholdGrams: 800, costPerKg: 11.00, alertLevel: "OK" },
   });
-  console.log(`✅ Ingredients: 16 created`);
+  const cakeFlour = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Cake Flour (Low Protein)", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 8000, reorderThresholdGrams: 4000, criticalThresholdGrams: 1500, costPerKg: 1.20, supplierId: flourSupplier.id, alertLevel: "OK" },
+  });
+  console.log(`✅ Ingredients: 17 created`);
 
   // ── Recipes ──────────────────────────────────────────────────────────────
   const sourdoughRecipe = await prisma.recipe.create({
@@ -241,7 +244,7 @@ async function main() {
         { ingredientId: butter.id, quantityGrams: 250, displayUnit: "g" },
         { ingredientId: casterSugar.id, quantityGrams: 350, displayUnit: "g" },
         { ingredientId: eggs.id, quantityGrams: 220, displayUnit: "g" },
-        { ingredientId: strongFlour.id, quantityGrams: 130, displayUnit: "g" },
+        { ingredientId: cakeFlour.id, quantityGrams: 130, displayUnit: "g" },
         { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "ml" },
       ]},
       stages: { create: [

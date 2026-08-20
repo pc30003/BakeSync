@@ -146,6 +146,9 @@ export async function POST(req: NextRequest) {
     await db.ingredient.create({
       data: { bakeryId: bakery.id, name: "Almond Flour (Ground)", category: IngredientCategory.NUT, unit: "kg", stockGrams: 3000, reorderThresholdGrams: 2000, criticalThresholdGrams: 800, costPerKg: 11.00, alertLevel: "OK" },
     });
+    const cakeFlour = await db.ingredient.create({
+      data: { bakeryId: bakery.id, name: "Cake Flour (Low Protein)", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 8000, reorderThresholdGrams: 4000, criticalThresholdGrams: 1500, costPerKg: 1.20, supplierId: flourSupplier.id, alertLevel: "OK" },
+    });
 
     // Recipes
     const sourdoughRecipe = await db.recipe.create({
@@ -253,7 +256,7 @@ export async function POST(req: NextRequest) {
           { ingredientId: butter.id, quantityGrams: 250, displayUnit: "g" },
           { ingredientId: casterSugar.id, quantityGrams: 350, displayUnit: "g" },
           { ingredientId: eggs.id, quantityGrams: 220, displayUnit: "g" },
-          { ingredientId: strongFlour.id, quantityGrams: 130, displayUnit: "g" },
+          { ingredientId: cakeFlour.id, quantityGrams: 130, displayUnit: "g" },
           { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "ml" },
         ]},
         stages: { create: [
