@@ -257,6 +257,25 @@ export async function PATCH(
 
     // ── Revoke ─────────────────────────────────────────────────────────────
     } else {
+      // Reset all checklist items back to PENDING
+      await db.checklistItem.updateMany({
+        where: {
+          batch: { scheduleId: params.id },
+          status: { in: ["DONE", "IN_PROGRESS"] },
+        },
+        data: {
+          status:        "PENDING",
+          completedById: null,
+          completedAt:   null,
+        },
+      });
+
+      // Reset batch statuses back to SCHEDULED
+      await db.productionBatch.updateMany({
+        where: { scheduleId: params.id },
+        data: { status: "SCHEDULED" },
+      });
+
       const revoked = await db.productionSchedule.update({
         where: { id: params.id },
         data: {
@@ -268,7 +287,7 @@ export async function PATCH(
 
       return ok({
         schedule: revoked,
-        message:  "Schedule approval revoked. Stock deductions already applied are NOT reversed.",
+        message:  "Schedule revoked. All checklist progress has been reset.",
       });
     }
 
