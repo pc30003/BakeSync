@@ -43,9 +43,28 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         );
 
         if (res.ok) {
-          setItems((prev) =>
-            prev.map((i) => (i.id === item.id ? { ...i, status: newStatus } : i))
-          );
+          if (newStatus === "PENDING") {
+            // Unchecking — also revert all subsequent steps to PENDING
+            setItems((prev) =>
+              prev.map((i) => i.order >= item.order ? { ...i, status: "PENDING" } : i)
+            );
+            // Also revert subsequent steps on the server
+            const subsequentItems = items.filter((i) => i.order > item.order && i.status === "DONE");
+            for (const sub of subsequentItems) {
+              await fetch(
+                `/api/schedules/${scheduleId}/batches/${batchId}/checklist`,
+                {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ itemId: sub.id, status: "PENDING" }),
+                }
+              );
+            }
+          } else {
+            setItems((prev) =>
+              prev.map((i) => (i.id === item.id ? { ...i, status: newStatus } : i))
+            );
+          }
         }
       } finally {
         setUpdatingId(null);
