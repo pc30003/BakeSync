@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { ok, notFound, serverError, validationError, requireAuth } from "@/lib/api-helpers";
+import { ok, notFound, serverError, validationError, requireAuth, error } from "@/lib/api-helpers";
+import { computeAlertLevel, handleStockChange } from "@/lib/stock-actions";
 
 const UpdateChecklistSchema = z.object({
   itemId: z.string(),
@@ -30,7 +31,7 @@ export async function PATCH(
 
     // Don't allow ticking items on unapproved schedules
     if (!item.batch.schedule.isApproved) {
-      return ok({ error: "Schedule must be approved before checklist items can be updated" });
+      return error("Schedule must be approved before checklist items can be updated", 403);
     }
 
     // Enforce sequential order — all previous items must be DONE or SKIPPED
@@ -49,21 +50,102 @@ export async function PATCH(
       );
 
       if (!allPreviousDone) {
-        return ok({ error: "Complete the previous steps first" });
+        return error("Complete the previous steps first", 400);
       }
     }
 
     const isDone = parsed.data.status === "DONE";
+    const wasUndone = item.status === "DONE" && parsed.data.status === "PENDING";
 
+    // ── Per-step stock deduction/restoration ─────────────────────────────
+    if (item.ingredientId && item.deductionGrams) {
+      const deductionGrams = item.deductionGrams;
+
+      if (isDone && item.status !== "DONE") {
+        // Ticking → deduct stock
+        const ingredient = await db.ingredient.findUnique({ where: { id: item.ingredientId } });
+        if (ingredient) {
+          const newStock = Math.max(0, Number(ingredient.stockGrams) - deductionGrams);
+          const alertLevel = computeAlertLevel(
+            newStock,
+            Number(ingredient.criticalThresholdGrams),
+            Number(ingredient.reorderThresholdGrams)
+          );
+          await db.ingredient.update({
+            where: { id: item.ingredientId },
+            data: { stockGrams: newStock, alertLevel },
+          });
+          // Trigger alerts/procurement if needed
+          await handleStockChange({
+            ingredientId: item.ingredientId,
+            bakeryId: session!.user.bakeryId,
+            newStock,
+            alertLevel,
+          });
+        }
+      } else if (wasUndone) {
+        // Unticking → restore stock
+        const ingredient = await db.ingredient.findUnique({ where: { id: item.ingredientId } });
+        if (ingredient) {
+          const newStock = Number(ingredient.stockGrams) + deductionGrams;
+          const alertLevel = computeAlertLevel(
+            newStock,
+            Number(ingredient.criticalThresholdGrams),
+            Number(ingredient.reorderThresholdGrams)
+          );
+          await db.ingredient.update({
+            where: { id: item.ingredientId },
+            data: { stockGrams: newStock, alertLevel },
+          });
+        }
+      }
+    }
+
+    // ── Update checklist item status ─────────────────────────────────────
     const updated = await db.checklistItem.update({
       where: { id: parsed.data.itemId },
       data: {
-        status:         parsed.data.status,
-        notes:          parsed.data.notes ?? null,
-        completedById:  isDone ? session!.user.id : null,
-        completedAt:    isDone ? new Date() : null,
+        status:        parsed.data.status,
+        notes:         parsed.data.notes ?? null,
+        completedById: isDone ? session!.user.id : null,
+        completedAt:   isDone ? new Date() : null,
       },
     });
+
+    // ── If unticking, also revert all subsequent steps ───────────────────
+    if (wasUndone) {
+      const subsequentItems = await db.checklistItem.findMany({
+        where: {
+          batchId: params.batchId,
+          order: { gt: item.order },
+          status: "DONE",
+        },
+      });
+
+      for (const sub of subsequentItems) {
+        // Restore stock for subsequent ticked items
+        if (sub.ingredientId && sub.deductionGrams) {
+          const ingredient = await db.ingredient.findUnique({ where: { id: sub.ingredientId } });
+          if (ingredient) {
+            const newStock = Number(ingredient.stockGrams) + sub.deductionGrams;
+            const alertLevel = computeAlertLevel(
+              newStock,
+              Number(ingredient.criticalThresholdGrams),
+              Number(ingredient.reorderThresholdGrams)
+            );
+            await db.ingredient.update({
+              where: { id: sub.ingredientId },
+              data: { stockGrams: newStock, alertLevel },
+            });
+          }
+        }
+
+        await db.checklistItem.update({
+          where: { id: sub.id },
+          data: { status: "PENDING", completedById: null, completedAt: null },
+        });
+      }
+    }
 
     return ok(updated);
   } catch (err) {

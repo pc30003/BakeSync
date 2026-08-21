@@ -343,6 +343,7 @@ model Ingredient {
   stockDeductions  StockDeduction[]
   wastageLogs      WastageLog[]
   procurements     ProcurementRecommendation[]
+  checklistItems   ChecklistItem[]
 
   @@index([bakeryId, alertLevel])
   @@map("ingredients")
@@ -516,19 +517,22 @@ model BatchStaffAssignment {
 }
 
 model ChecklistItem {
-  id          String              @id @default(cuid())
-  batchId     String
-  stageId     String?
-  order       Int
-  description String
-  status      ChecklistItemStatus @default(PENDING)
+  id            String              @id @default(cuid())
+  batchId       String
+  stageId       String?
+  order         Int
+  description   String
+  status        ChecklistItemStatus @default(PENDING)
   completedById String?
-  completedAt DateTime?
-  notes       String?
+  completedAt   DateTime?
+  notes         String?
+  ingredientId  String?
+  deductionGrams Float?             // grams to deduct/restore when ticked/unticked
 
   batch       ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   stage       RecipeStage?    @relation(fields: [stageId], references: [id])
   completedBy User?           @relation("CompletedBy", fields: [completedById], references: [id])
+  ingredient  Ingredient?     @relation(fields: [ingredientId], references: [id])
 
   @@index([batchId, order])
   @@map("checklist_items")
