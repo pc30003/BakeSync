@@ -60,115 +60,135 @@ export async function PATCH(
     const isDone = parsed.data.status === "DONE";
     const wasUndone = item.status === "DONE" && parsed.data.status === "PENDING";
 
-    // ── Per-step stock deduction/restoration ─────────────────────────────
-    // Collect all deductions for this step (from ChecklistDeduction table OR legacy single field)
-    const stepDeductions: Array<{ ingredientId: string; grams: number }> = [];
+    // ── Wrap everything in a transaction ─────────────────────────────────
+    // This ensures deduction and status update succeed or fail together
+    const updated = await db.$transaction(async (tx) => {
+      // Collect all deductions for this step
+      const stepDeductions: Array<{ ingredientId: string; grams: number }> = [];
 
-    if (item.deductions && item.deductions.length > 0) {
-      for (const d of item.deductions) {
-        stepDeductions.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
-      }
-    } else if (item.ingredientId && item.deductionGrams) {
-      stepDeductions.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
-    }
-
-    if (stepDeductions.length > 0) {
-      if (isDone && item.status !== "DONE") {
-        // Ticking → deduct all ingredients for this step
-        for (const d of stepDeductions) {
-          const ingredient = await db.ingredient.findUnique({ where: { id: d.ingredientId } });
-          if (ingredient) {
-            const newStock = Math.max(0, Number(ingredient.stockGrams) - d.grams);
-            const alertLevel = computeAlertLevel(
-              newStock,
-              Number(ingredient.criticalThresholdGrams),
-              Number(ingredient.reorderThresholdGrams)
-            );
-            await db.ingredient.update({
-              where: { id: d.ingredientId },
-              data: { stockGrams: newStock, alertLevel },
-            });
-            await handleStockChange({
-              ingredientId: d.ingredientId,
-              bakeryId: session!.user.bakeryId,
-              newStock,
-              alertLevel,
-            });
-          }
+      if (item.deductions && item.deductions.length > 0) {
+        for (const d of item.deductions) {
+          stepDeductions.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
         }
-      } else if (wasUndone) {
-        // Unticking → restore all ingredients for this step
-        for (const d of stepDeductions) {
-          const ingredient = await db.ingredient.findUnique({ where: { id: d.ingredientId } });
-          if (ingredient) {
-            const newStock = Number(ingredient.stockGrams) + d.grams;
-            const alertLevel = computeAlertLevel(
-              newStock,
-              Number(ingredient.criticalThresholdGrams),
-              Number(ingredient.reorderThresholdGrams)
-            );
-            await db.ingredient.update({
-              where: { id: d.ingredientId },
-              data: { stockGrams: newStock, alertLevel },
-            });
+      } else if (item.ingredientId && item.deductionGrams) {
+        stepDeductions.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
+      }
+
+      if (stepDeductions.length > 0) {
+        if (isDone && item.status !== "DONE") {
+          for (const d of stepDeductions) {
+            const ingredient = await tx.ingredient.findUnique({ where: { id: d.ingredientId } });
+            if (ingredient) {
+              const newStock = Math.max(0, Number(ingredient.stockGrams) - d.grams);
+              const alertLevel = computeAlertLevel(
+                newStock,
+                Number(ingredient.criticalThresholdGrams),
+                Number(ingredient.reorderThresholdGrams)
+              );
+              await tx.ingredient.update({
+                where: { id: d.ingredientId },
+                data: { stockGrams: newStock, alertLevel },
+              });
+            }
+          }
+        } else if (wasUndone) {
+          for (const d of stepDeductions) {
+            const ingredient = await tx.ingredient.findUnique({ where: { id: d.ingredientId } });
+            if (ingredient) {
+              const newStock = Number(ingredient.stockGrams) + d.grams;
+              const alertLevel = computeAlertLevel(
+                newStock,
+                Number(ingredient.criticalThresholdGrams),
+                Number(ingredient.reorderThresholdGrams)
+              );
+              await tx.ingredient.update({
+                where: { id: d.ingredientId },
+                data: { stockGrams: newStock, alertLevel },
+              });
+            }
           }
         }
       }
-    }
 
-    // ── Update checklist item status ─────────────────────────────────────
-    const updated = await db.checklistItem.update({
-      where: { id: parsed.data.itemId },
-      data: {
-        status:        parsed.data.status,
-        notes:         parsed.data.notes ?? null,
-        completedById: isDone ? session!.user.id : null,
-        completedAt:   isDone ? new Date() : null,
-      },
-    });
-
-    // ── If unticking, also revert all subsequent steps ───────────────────
-    if (wasUndone) {
-      const subsequentItems = await db.checklistItem.findMany({
-        where: {
-          batchId: params.batchId,
-          order: { gt: item.order },
-          status: "DONE",
+      // Update checklist item status
+      const result = await tx.checklistItem.update({
+        where: { id: parsed.data.itemId },
+        data: {
+          status:        parsed.data.status,
+          notes:         parsed.data.notes ?? null,
+          completedById: isDone ? session!.user.id : null,
+          completedAt:   isDone ? new Date() : null,
         },
-        include: { deductions: true },
       });
 
-      for (const sub of subsequentItems) {
-        // Restore stock for subsequent ticked items
-        const subDeductions: Array<{ ingredientId: string; grams: number }> = [];
-        if (sub.deductions && sub.deductions.length > 0) {
-          for (const d of sub.deductions) {
-            subDeductions.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
-          }
-        } else if (sub.ingredientId && sub.deductionGrams) {
-          subDeductions.push({ ingredientId: sub.ingredientId, grams: sub.deductionGrams });
-        }
-
-        for (const d of subDeductions) {
-          const ingredient = await db.ingredient.findUnique({ where: { id: d.ingredientId } });
-          if (ingredient) {
-            const newStock = Number(ingredient.stockGrams) + d.grams;
-            const alertLevel = computeAlertLevel(
-              newStock,
-              Number(ingredient.criticalThresholdGrams),
-              Number(ingredient.reorderThresholdGrams)
-            );
-            await db.ingredient.update({
-              where: { id: d.ingredientId },
-              data: { stockGrams: newStock, alertLevel },
-            });
-          }
-        }
-
-        await db.checklistItem.update({
-          where: { id: sub.id },
-          data: { status: "PENDING", completedById: null, completedAt: null },
+      // If unticking, revert subsequent steps
+      if (wasUndone) {
+        const subsequentItems = await tx.checklistItem.findMany({
+          where: { batchId: params.batchId, order: { gt: item.order }, status: "DONE" },
+          include: { deductions: true },
         });
+
+        for (const sub of subsequentItems) {
+          const subDeductions: Array<{ ingredientId: string; grams: number }> = [];
+          if (sub.deductions && sub.deductions.length > 0) {
+            for (const d of sub.deductions) {
+              subDeductions.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
+            }
+          } else if (sub.ingredientId && sub.deductionGrams) {
+            subDeductions.push({ ingredientId: sub.ingredientId, grams: sub.deductionGrams });
+          }
+
+          for (const d of subDeductions) {
+            const ingredient = await tx.ingredient.findUnique({ where: { id: d.ingredientId } });
+            if (ingredient) {
+              const newStock = Number(ingredient.stockGrams) + d.grams;
+              const alertLevel = computeAlertLevel(
+                newStock,
+                Number(ingredient.criticalThresholdGrams),
+                Number(ingredient.reorderThresholdGrams)
+              );
+              await tx.ingredient.update({
+                where: { id: d.ingredientId },
+                data: { stockGrams: newStock, alertLevel },
+              });
+            }
+          }
+
+          await tx.checklistItem.update({
+            where: { id: sub.id },
+            data: { status: "PENDING", completedById: null, completedAt: null },
+          });
+        }
+      }
+
+      return result;
+    });
+
+    // Post-transaction: trigger alerts if stock dropped (outside transaction)
+    if (isDone && item.status !== "DONE") {
+      const stepDeductions: Array<{ ingredientId: string; grams: number }> = [];
+      if (item.deductions && item.deductions.length > 0) {
+        for (const d of item.deductions) {
+          stepDeductions.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
+        }
+      } else if (item.ingredientId && item.deductionGrams) {
+        stepDeductions.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
+      }
+      for (const d of stepDeductions) {
+        const ingredient = await db.ingredient.findUnique({ where: { id: d.ingredientId } });
+        if (ingredient) {
+          const alertLevel = computeAlertLevel(
+            Number(ingredient.stockGrams),
+            Number(ingredient.criticalThresholdGrams),
+            Number(ingredient.reorderThresholdGrams)
+          );
+          await handleStockChange({
+            ingredientId: d.ingredientId,
+            bakeryId: session!.user.bakeryId,
+            newStock: Number(ingredient.stockGrams),
+            alertLevel,
+          });
+        }
       }
     }
 
