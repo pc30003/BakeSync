@@ -32,6 +32,17 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
     const newStatus = item.status === "DONE" ? "PENDING" : "DONE";
     setUpdatingId(item.id);
 
+    // Optimistically update UI immediately
+    if (newStatus === "PENDING") {
+      setItems((prev) =>
+        prev.map((i) => i.order >= item.order ? { ...i, status: "PENDING" } : i)
+      );
+    } else {
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, status: "DONE" } : i))
+      );
+    }
+
     try {
       const res = await fetch(
         `/api/schedules/${scheduleId}/batches/${batchId}/checklist`,
@@ -43,29 +54,12 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
       );
 
       if (!res.ok) {
-        setUpdatingId(null);
-        return;
-      }
-
-      const json = await res.json();
-      if (!json.success) {
-        setUpdatingId(null);
-        return;
-      }
-
-      // Success — update local state
-      if (newStatus === "PENDING") {
-        // Unchecking — revert this and all subsequent steps
-        setItems((prev) =>
-          prev.map((i) => i.order >= item.order ? { ...i, status: "PENDING" } : i)
-        );
-      } else {
-        setItems((prev) =>
-          prev.map((i) => (i.id === item.id ? { ...i, status: "DONE" } : i))
-        );
+        // Revert on failure
+        setItems(initialItems);
       }
     } catch {
-      // Network error — do nothing
+      // Network error — revert
+      setItems(initialItems);
     } finally {
       setUpdatingId(null);
     }
