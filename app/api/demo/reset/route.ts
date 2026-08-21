@@ -417,8 +417,8 @@ export async function POST(req: NextRequest) {
     // Checklists
     await db.checklistItem.createMany({
       data: [
-        { batchId: sourdoughBatch.id, order: 1, description: "Weigh 4.5 kg bread flour", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: strongFlour.id, deductionGrams: 4500 },
-        { batchId: sourdoughBatch.id, order: 2, description: "Add 90g salt and 3L water", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: salt.id, deductionGrams: 90 },
+        { batchId: sourdoughBatch.id, order: 1, description: "Weigh 4.5 kg Strong White Bread Flour into mixing bowl", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: strongFlour.id, deductionGrams: 4500 },
+        { batchId: sourdoughBatch.id, order: 2, description: "Add 90g Fine Sea Salt and 3L water", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: salt.id, deductionGrams: 90 },
         { batchId: sourdoughBatch.id, order: 3, description: "Mix on low speed 10 min, medium 5 min", status: "DONE", completedById: floorStaff.id, completedAt: new Date() },
         { batchId: sourdoughBatch.id, order: 4, description: "Autolyse rest — cover and leave 30 min", status: "IN_PROGRESS" },
         { batchId: sourdoughBatch.id, order: 5, description: "Bulk ferment at 25°C for 4 hours (stretch & fold every 45 min)", status: "PENDING" },
@@ -433,15 +433,15 @@ export async function POST(req: NextRequest) {
 
     await db.checklistItem.createMany({
       data: [
-        { batchId: croissantBatch.id, order: 1, description: "Weigh 1.5 kg flour, 30g yeast, 30g salt, 165g eggs, 450ml milk, 150g sugar", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 1500 },
+        { batchId: croissantBatch.id, order: 1, description: "Weigh 1.5 kg Strong White Bread Flour, 30g Instant Dried Yeast, 30g Fine Sea Salt, 165g Eggs, 450ml Whole Milk, 150g Caster Sugar", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 1500 },
         { batchId: croissantBatch.id, order: 2, description: "Mix détrempe — 15 min on medium speed until smooth", status: "PENDING" },
         { batchId: croissantBatch.id, order: 3, description: "Wrap and chill détrempe 1 hour", status: "PENDING" },
-        { batchId: croissantBatch.id, order: 4, description: "Prepare 840g butter block (pound flat, 20×20cm)", status: "PENDING", ingredientId: butter.id, deductionGrams: 840 },
+        { batchId: croissantBatch.id, order: 4, description: "Prepare 840g Unsalted Butter block (pound flat, 20×20cm)", status: "PENDING", ingredientId: butter.id, deductionGrams: 840 },
         { batchId: croissantBatch.id, order: 5, description: "Enclose butter, first letter fold", status: "PENDING" },
         { batchId: croissantBatch.id, order: 6, description: "Rest 30 min, second fold, rest 30 min, third fold", status: "PENDING" },
         { batchId: croissantBatch.id, order: 7, description: "Roll to 4mm, cut 36 triangles", status: "PENDING" },
         { batchId: croissantBatch.id, order: 8, description: "Shape croissants, place on lined trays", status: "PENDING" },
-        { batchId: croissantBatch.id, order: 9, description: "Egg wash, proof at 27°C for 2 hours until doubled", status: "PENDING", ingredientId: eggs.id, deductionGrams: 165 },
+        { batchId: croissantBatch.id, order: 9, description: "Egg wash with Free Range Eggs, proof at 27°C for 2 hours until doubled", status: "PENDING", ingredientId: eggs.id, deductionGrams: 165 },
         { batchId: croissantBatch.id, order: 10, description: "Second egg wash, bake at 190°C for 18 minutes", status: "PENDING" },
         { batchId: croissantBatch.id, order: 11, description: "Cool on rack — do not stack", status: "PENDING" },
       ],
@@ -449,10 +449,10 @@ export async function POST(req: NextRequest) {
 
     await db.checklistItem.createMany({
       data: [
-        { batchId: focacciaBatch.id, order: 1, description: "Weigh 4 kg flour, 640ml olive oil, 96g salt, 40g yeast", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 4000 },
+        { batchId: focacciaBatch.id, order: 1, description: "Weigh 4 kg Strong White Bread Flour, 640ml Extra Virgin Olive Oil, 96g Fine Sea Salt, 40g Instant Dried Yeast", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 4000 },
         { batchId: focacciaBatch.id, order: 2, description: "Mix high-hydration dough (80% water)", status: "PENDING" },
         { batchId: focacciaBatch.id, order: 3, description: "Bulk ferment 3 hours — fold every 45 min", status: "PENDING" },
-        { batchId: focacciaBatch.id, order: 4, description: "Oil 8 trays, divide dough, stretch to fill", status: "PENDING", ingredientId: oliveOil.id, deductionGrams: 640 },
+        { batchId: focacciaBatch.id, order: 4, description: "Oil 8 trays with Extra Virgin Olive Oil, divide dough, stretch to fill", status: "PENDING", ingredientId: oliveOil.id, deductionGrams: 640 },
         { batchId: focacciaBatch.id, order: 5, description: "Dimple, drizzle oil, add rosemary & flaky salt", status: "PENDING" },
         { batchId: focacciaBatch.id, order: 6, description: "Final proof 30 min", status: "PENDING" },
         { batchId: focacciaBatch.id, order: 7, description: "Bake at 220°C for 25 min until deep golden", status: "PENDING" },
