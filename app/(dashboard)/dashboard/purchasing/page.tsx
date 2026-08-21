@@ -9,6 +9,7 @@ import { formatDate, formatGrams, formatCurrency } from "@/lib/utils";
 import { ShoppingCart, AlertTriangle, Truck, Package } from "lucide-react";
 import { ProcurementApproveButton } from "@/components/purchasing/approve-button";
 import { AIProcurementButton } from "@/components/agent/ai-procurement-button";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 export const metadata: Metadata = { title: "Procurement Dashboard" };
 
@@ -52,6 +53,7 @@ export default async function PurchasingDashboard() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh interval={3000} />
       <PageHeader
         title="Procurement"
         description={`${formatDate(now)} — review and approve purchasing recommendations`}

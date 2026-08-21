@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { StockLevelBar } from "@/components/ui/stock-level-bar";
 import { formatGrams, formatCurrency } from "@/lib/utils";
@@ -35,6 +36,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh interval={3000} />
       <PageHeader
         title="Stock Levels"
         description={`${ingredients.length} tracked ingredients`}

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ export default async function HeadBakerDashboard() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh interval={3000} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — here's today's kitchen overview`}
