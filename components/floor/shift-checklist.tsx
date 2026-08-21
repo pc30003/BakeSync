@@ -22,14 +22,17 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
   const [items, setItems] = useState(initialItems);
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   const done = items.filter((i) => i.status === "DONE").length;
   const total = items.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   async function toggle(item: ChecklistItemData) {
+    if (isLocked) return; // Prevent double-clicks
     const newStatus = item.status === "DONE" ? "PENDING" : "DONE";
     setUpdatingId(item.id);
+    setIsLocked(true);
 
     startTransition(async () => {
       try {
@@ -42,7 +45,9 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
           }
         );
 
-        if (res.ok) {
+        const json = await res.json();
+
+        if (res.ok && json.success !== false && !json.data?.error) {
           if (newStatus === "PENDING") {
             // Unchecking — also revert all subsequent steps to PENDING
             setItems((prev) =>
@@ -68,6 +73,7 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         }
       } finally {
         setUpdatingId(null);
+        setIsLocked(false);
       }
     });
   }
@@ -99,41 +105,41 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         const isLoading = updatingId === item.id && isPending;
 
         // Item is locked if any previous item is not DONE or SKIPPED
-        const isLocked = index > 0 && items.slice(0, index).some(
+        const isStepLocked = index > 0 && items.slice(0, index).some(
           (prev) => prev.status !== "DONE" && prev.status !== "SKIPPED"
         );
 
         return (
           <li key={item.id}>
             <button
-              onClick={() => !isLocked && toggle(item)}
-              disabled={isLoading || isLocked}
+              onClick={() => !isStepLocked && !isLocked && toggle(item)}
+              disabled={isLoading || isLocked || isStepLocked}
               className={cn(
                 "w-full flex items-center gap-3 px-5 py-3.5 text-left tap-target",
                 "transition-colors",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
                 isDone && "opacity-60",
-                isLocked
+                isStepLocked
                   ? "opacity-40 cursor-not-allowed"
                   : "hover:bg-muted/50"
               )}
               aria-pressed={isDone}
-              aria-disabled={isLocked}
-              aria-label={isLocked ? `Locked: ${item.description}` : `${isDone ? "Unmark" : "Complete"}: ${item.description}`}
+              aria-disabled={isStepLocked}
+              aria-label={isStepLocked ? `Locked: ${item.description}` : `${isDone ? "Unmark" : "Complete"}: ${item.description}`}
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 shrink-0 animate-spin text-primary" aria-hidden="true" />
               ) : isDone ? (
                 <CheckSquare className="w-5 h-5 shrink-0 text-primary" aria-hidden="true" />
-              ) : isLocked ? (
+              ) : isStepLocked ? (
                 <Square className="w-5 h-5 shrink-0 text-muted-foreground/40" aria-hidden="true" />
               ) : (
                 <Square className="w-5 h-5 shrink-0 text-muted-foreground" aria-hidden="true" />
               )}
-              <span className={cn("text-sm", isDone && "line-through", isLocked && "text-muted-foreground")}>
+              <span className={cn("text-sm", isDone && "line-through", isStepLocked && "text-muted-foreground")}>
                 {item.description}
               </span>
-              {isLocked && (
+              {isStepLocked && (
                 <span className="ml-auto text-[10px] text-muted-foreground/60 shrink-0">
                   Complete previous step first
                 </span>
