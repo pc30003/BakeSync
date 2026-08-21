@@ -53,13 +53,29 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         }
       );
 
+      // If API failed, revert the optimistic update
       if (!res.ok) {
-        // Revert on failure
-        setItems(initialItems);
+        if (newStatus === "DONE") {
+          setItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, status: "PENDING" } : i))
+          );
+        } else {
+          setItems((prev) =>
+            prev.map((i) => (i.id === item.id ? { ...i, status: "DONE" } : i))
+          );
+        }
       }
     } catch {
       // Network error — revert
-      setItems(initialItems);
+      if (newStatus === "DONE") {
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, status: "PENDING" } : i))
+        );
+      } else {
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, status: "DONE" } : i))
+        );
+      }
     } finally {
       setUpdatingId(null);
     }

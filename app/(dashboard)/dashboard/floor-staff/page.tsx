@@ -11,9 +11,6 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 
 export const metadata: Metadata = { title: "My Shift" };
 
-// Revalidate every 2 seconds so approved schedules appear quickly
-export const revalidate = 2;
-
 export default async function FloorStaffDashboard() {
   const session = await auth();
   const bakeryId = session!.user.bakeryId;
