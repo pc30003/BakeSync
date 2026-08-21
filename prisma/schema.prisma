@@ -551,7 +551,6 @@ model ChecklistDeduction {
 
   @@map("checklist_deductions")
 }
-}
 
 model OvenCapacityBlock {
   id        String    @id @default(cuid())
