@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { CheckSquare, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,62 +20,55 @@ interface FloorShiftChecklistProps {
 
 export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: FloorShiftChecklistProps) {
   const [items, setItems] = useState(initialItems);
-  const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [isLocked, setIsLocked] = useState(false);
 
   const done = items.filter((i) => i.status === "DONE").length;
   const total = items.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   async function toggle(item: ChecklistItemData) {
-    if (isLocked) return; // Prevent double-clicks
+    if (updatingId) return; // Prevent double-clicks
+
     const newStatus = item.status === "DONE" ? "PENDING" : "DONE";
     setUpdatingId(item.id);
-    setIsLocked(true);
 
-    startTransition(async () => {
-      try {
-        const res = await fetch(
-          `/api/schedules/${scheduleId}/batches/${batchId}/checklist`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ itemId: item.id, status: newStatus }),
-          }
-        );
-
-        const json = await res.json();
-
-        if (res.ok && json.success !== false && !json.data?.error) {
-          if (newStatus === "PENDING") {
-            // Unchecking — also revert all subsequent steps to PENDING
-            setItems((prev) =>
-              prev.map((i) => i.order >= item.order ? { ...i, status: "PENDING" } : i)
-            );
-            // Also revert subsequent steps on the server
-            const subsequentItems = items.filter((i) => i.order > item.order && i.status === "DONE");
-            for (const sub of subsequentItems) {
-              await fetch(
-                `/api/schedules/${scheduleId}/batches/${batchId}/checklist`,
-                {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ itemId: sub.id, status: "PENDING" }),
-                }
-              );
-            }
-          } else {
-            setItems((prev) =>
-              prev.map((i) => (i.id === item.id ? { ...i, status: newStatus } : i))
-            );
-          }
+    try {
+      const res = await fetch(
+        `/api/schedules/${scheduleId}/batches/${batchId}/checklist`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId: item.id, status: newStatus }),
         }
-      } finally {
+      );
+
+      if (!res.ok) {
         setUpdatingId(null);
-        setIsLocked(false);
+        return;
       }
-    });
+
+      const json = await res.json();
+      if (!json.success) {
+        setUpdatingId(null);
+        return;
+      }
+
+      // Success — update local state
+      if (newStatus === "PENDING") {
+        // Unchecking — revert this and all subsequent steps
+        setItems((prev) =>
+          prev.map((i) => i.order >= item.order ? { ...i, status: "PENDING" } : i)
+        );
+      } else {
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, status: "DONE" } : i))
+        );
+      }
+    } catch {
+      // Network error — do nothing
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   if (items.length === 0) {
@@ -102,7 +95,7 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
       <ul className="divide-y divide-border" role="list" aria-label="Batch checklist">
       {items.map((item, index) => {
         const isDone    = item.status === "DONE";
-        const isLoading = updatingId === item.id && isPending;
+        const isLoading = updatingId === item.id;
 
         // Item is locked if any previous item is not DONE or SKIPPED
         const isStepLocked = index > 0 && items.slice(0, index).some(
@@ -112,8 +105,8 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
         return (
           <li key={item.id}>
             <button
-              onClick={() => !isStepLocked && !isLocked && toggle(item)}
-              disabled={isLoading || isLocked || isStepLocked}
+              onClick={() => !isStepLocked && !updatingId && toggle(item)}
+              disabled={isLoading || !!updatingId || isStepLocked}
               className={cn(
                 "w-full flex items-center gap-3 px-5 py-3.5 text-left tap-target",
                 "transition-colors",
