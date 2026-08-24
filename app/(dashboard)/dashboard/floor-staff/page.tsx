@@ -27,7 +27,13 @@ export default async function FloorStaffDashboard() {
         where: { status: { in: ["SCHEDULED", "IN_PROGRESS"] } },
         include: {
           recipe: { select: { name: true, category: true } },
-          checklist: { orderBy: { order: "asc" } },
+          checklist: {
+            orderBy: { order: "asc" },
+            include: {
+              ingredient: { select: { name: true } },
+              deductions: { include: { ingredient: { select: { name: true } } } },
+            },
+          },
         },
         orderBy: { plannedStartTime: "asc" },
       },

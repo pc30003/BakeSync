@@ -7,6 +7,7 @@ import { DemoBanner } from "./demo-banner";
 import { ToastContainer } from "@/components/ui/toast-notification";
 import { AlertPoller } from "@/components/agent/alert-poller";
 import { DemoTour } from "@/components/ui/demo-tour";
+import { PWAUpdatePrompt } from "@/components/ui/pwa-update-prompt";
 import type { SessionUser } from "@/types";
 
 const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
@@ -57,6 +58,8 @@ export function AppShell({ user, children }: AppShellProps) {
       <AlertPoller />
       {/* Demo tour guide */}
       <DemoTour role={user.role} />
+      {/* PWA update prompt */}
+      <PWAUpdatePrompt />
     </div>
   );
 }

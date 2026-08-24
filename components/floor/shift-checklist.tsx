@@ -4,12 +4,22 @@ import { useState } from "react";
 import { CheckSquare, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface DeductionData {
+  ingredientId: string;
+  deductionGrams: number;
+  ingredient: { name: string };
+}
+
 interface ChecklistItemData {
   id: string;
   description: string;
   status: string;
   order: number;
   notes: string | null;
+  ingredientId?: string | null;
+  deductionGrams?: number | null;
+  ingredient?: { name: string } | null;
+  deductions?: DeductionData[];
 }
 
 interface FloorShiftChecklistProps {
@@ -142,6 +152,22 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
               <span className={cn("text-sm", isDone && "line-through", isStepLocked && "text-muted-foreground")}>
                 {item.description}
               </span>
+              {/* Ingredient deduction tags */}
+              {!isStepLocked && (item.deductions?.length || item.ingredientId) && (
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  {item.deductions && item.deductions.length > 0 ? (
+                    item.deductions.map((d, i) => (
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                        📦 {d.ingredient.name} −{d.deductionGrams >= 1000 ? `${(d.deductionGrams / 1000).toFixed(1)}kg` : `${d.deductionGrams}g`}
+                      </span>
+                    ))
+                  ) : item.ingredient && item.deductionGrams ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                      📦 {item.ingredient.name} −{item.deductionGrams >= 1000 ? `${(item.deductionGrams / 1000).toFixed(1)}kg` : `${item.deductionGrams}g`}
+                    </span>
+                  ) : null}
+                </div>
+              )}
               {isStepLocked && (
                 <span className="ml-auto text-[10px] text-muted-foreground/60 shrink-0">
                   Complete previous step first

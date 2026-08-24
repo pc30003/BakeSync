@@ -8,6 +8,7 @@ interface Ingredient {
   id: string;
   name: string;
   unit: string;
+  stockGrams: number;
 }
 
 interface WastageLogFormProps {
@@ -114,19 +115,32 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
         <label htmlFor="quantityGrams" className="text-sm font-medium">
           Quantity (grams) <span className="text-destructive">*</span>
         </label>
-        <input
-          id="quantityGrams"
-          name="quantityGrams"
-          type="number"
-          min="0"
-          max="100000"
-          step="1"
-          required
-          value={form.quantityGrams}
-          onChange={handleChange}
-          placeholder="e.g. 250"
-          className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        />
+        {(() => {
+          const selected = ingredients.find((i) => i.id === form.ingredientId);
+          const maxGrams = selected ? Math.min(selected.stockGrams, 100000) : 100000;
+          return (
+            <>
+              <input
+                id="quantityGrams"
+                name="quantityGrams"
+                type="number"
+                min="0"
+                max={maxGrams}
+                step="1"
+                required
+                value={form.quantityGrams}
+                onChange={handleChange}
+                placeholder="e.g. 250"
+                className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              {selected && (
+                <p className="text-xs text-muted-foreground">
+                  Max: {selected.stockGrams >= 1000 ? `${(selected.stockGrams / 1000).toFixed(1)} kg` : `${selected.stockGrams}g`} in stock
+                </p>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Reason */}

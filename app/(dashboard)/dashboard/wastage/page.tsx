@@ -18,7 +18,7 @@ export default async function WastagePage() {
   const [ingredients, recentLogs] = await Promise.all([
     db.ingredient.findMany({
       where:   { bakeryId, isTracked: true },
-      select:  { id: true, name: true, unit: true },
+      select:  { id: true, name: true, unit: true, stockGrams: true },
       orderBy: { name: "asc" },
     }),
     db.wastageLog.findMany({
@@ -46,7 +46,7 @@ export default async function WastagePage() {
             <CardTitle>New Wastage Entry</CardTitle>
           </CardHeader>
           <CardContent>
-            <WastageLogForm ingredients={ingredients} />
+            <WastageLogForm ingredients={ingredients.map(i => ({ ...i, stockGrams: Number(i.stockGrams) }))} />
           </CardContent>
         </Card>
 

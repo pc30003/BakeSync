@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // ── Wipe ALL existing demo data ──────────────────────────────────────
+    await db.checklistDeduction.deleteMany({   where: { checklistItem: { batch: { schedule: { bakeryId: "bakery_demo" } } } } });
     await db.checklistItem.deleteMany({        where: { batch: { schedule: { bakeryId: "bakery_demo" } } } });
     await db.productionBatch.deleteMany({      where: { schedule: { bakeryId: "bakery_demo" } } });
     await db.productionSchedule.deleteMany({   where: { bakeryId: "bakery_demo" } });
@@ -431,9 +432,22 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    // Croissant step 1 — multiple ingredients
+    const croissantStep1 = await db.checklistItem.create({
+      data: { batchId: croissantBatch.id, order: 1, description: "Weigh 1.5 kg Strong White Bread Flour, 30g Instant Dried Yeast, 30g Fine Sea Salt, 165g Eggs, 450ml Whole Milk, 150g Caster Sugar", status: "PENDING" },
+    });
+    await db.checklistDeduction.createMany({
+      data: [
+        { checklistItemId: croissantStep1.id, ingredientId: strongFlour.id, deductionGrams: 1500 },
+        { checklistItemId: croissantStep1.id, ingredientId: instantYeast.id, deductionGrams: 30 },
+        { checklistItemId: croissantStep1.id, ingredientId: salt.id, deductionGrams: 30 },
+        { checklistItemId: croissantStep1.id, ingredientId: eggs.id, deductionGrams: 165 },
+        { checklistItemId: croissantStep1.id, ingredientId: wholeMilk.id, deductionGrams: 450 },
+        { checklistItemId: croissantStep1.id, ingredientId: casterSugar.id, deductionGrams: 150 },
+      ],
+    });
     await db.checklistItem.createMany({
       data: [
-        { batchId: croissantBatch.id, order: 1, description: "Weigh 1.5 kg Strong White Bread Flour, 30g Instant Dried Yeast, 30g Fine Sea Salt, 165g Eggs, 450ml Whole Milk, 150g Caster Sugar", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 1500 },
         { batchId: croissantBatch.id, order: 2, description: "Mix détrempe — 15 min on medium speed until smooth", status: "PENDING" },
         { batchId: croissantBatch.id, order: 3, description: "Wrap and chill détrempe 1 hour", status: "PENDING" },
         { batchId: croissantBatch.id, order: 4, description: "Prepare 840g Unsalted Butter block (pound flat, 20×20cm)", status: "PENDING", ingredientId: butter.id, deductionGrams: 840 },
@@ -447,9 +461,20 @@ export async function POST(req: NextRequest) {
       ],
     });
 
+    // Focaccia step 1 — multiple ingredients
+    const focacciaStep1 = await db.checklistItem.create({
+      data: { batchId: focacciaBatch.id, order: 1, description: "Weigh 4 kg Strong White Bread Flour, 640ml Extra Virgin Olive Oil, 96g Fine Sea Salt, 40g Instant Dried Yeast", status: "PENDING" },
+    });
+    await db.checklistDeduction.createMany({
+      data: [
+        { checklistItemId: focacciaStep1.id, ingredientId: strongFlour.id, deductionGrams: 4000 },
+        { checklistItemId: focacciaStep1.id, ingredientId: oliveOil.id, deductionGrams: 640 },
+        { checklistItemId: focacciaStep1.id, ingredientId: salt.id, deductionGrams: 96 },
+        { checklistItemId: focacciaStep1.id, ingredientId: instantYeast.id, deductionGrams: 40 },
+      ],
+    });
     await db.checklistItem.createMany({
       data: [
-        { batchId: focacciaBatch.id, order: 1, description: "Weigh 4 kg Strong White Bread Flour, 640ml Extra Virgin Olive Oil, 96g Fine Sea Salt, 40g Instant Dried Yeast", status: "PENDING", ingredientId: strongFlour.id, deductionGrams: 4000 },
         { batchId: focacciaBatch.id, order: 2, description: "Mix high-hydration dough (80% water)", status: "PENDING" },
         { batchId: focacciaBatch.id, order: 3, description: "Bulk ferment 3 hours — fold every 45 min", status: "PENDING" },
         { batchId: focacciaBatch.id, order: 4, description: "Oil 8 trays with Extra Virgin Olive Oil, divide dough, stretch to fill", status: "PENDING", ingredientId: oliveOil.id, deductionGrams: 640 },
