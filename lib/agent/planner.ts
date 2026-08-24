@@ -37,7 +37,7 @@ Your job is to generate an optimal production schedule for a given shift.
    - Ingredient stock levels — if stock is insufficient, reduce batch quantity and flag a shortfall
    - FEFO: use ingredients expiring soonest first
    - Shelf life: only produce what can be sold before the product expires
-4. Generate a clear step-by-step checklist for each batch.
+4. Generate a clear step-by-step checklist for each batch. IMPORTANT: In every step that involves weighing or using ingredients, include the FULL ingredient name and exact quantity. For example: "Weigh 4.5 kg Strong White Bread Flour into mixing bowl" NOT "Weigh flour". "Add 90g Fine Sea Salt and 3L water" NOT "Add salt and water". "Prepare 840g Unsalted Butter block" NOT "Prepare butter block". Always use the exact ingredient names provided in the recipe data.
 5. Provide a brief plain-English reasoning summary in aiNotes.
 
 ## Hard constraints
