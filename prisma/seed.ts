@@ -29,215 +29,78 @@ async function main() {
   const headBaker = await prisma.user.upsert({
     where: { email: "head@artisanloaf.com" },
     update: { password: demoPassword },
-    create: {
-      email: "head@artisanloaf.com",
-      name: "Sarah Chen",
-      role: UserRole.HEAD_BAKER,
-      password: demoPassword,
-      bakeryId: bakery.id,
-    },
+    create: { email: "head@artisanloaf.com", name: "Sarah Chen", role: UserRole.HEAD_BAKER, password: demoPassword, bakeryId: bakery.id },
   });
-
   const floorStaff = await prisma.user.upsert({
     where: { email: "floor@artisanloaf.com" },
     update: { password: demoPassword },
-    create: {
-      email: "floor@artisanloaf.com",
-      name: "Marcus Webb",
-      role: UserRole.FLOOR_STAFF,
-      password: demoPassword,
-      bakeryId: bakery.id,
-    },
+    create: { email: "floor@artisanloaf.com", name: "Marcus Webb", role: UserRole.FLOOR_STAFF, password: demoPassword, bakeryId: bakery.id },
   });
-
   const purchasingManager = await prisma.user.upsert({
     where: { email: "purchasing@artisanloaf.com" },
     update: { password: demoPassword },
-    create: {
-      email: "purchasing@artisanloaf.com",
-      name: "Priya Patel",
-      role: UserRole.PURCHASING_MANAGER,
-      password: demoPassword,
-      bakeryId: bakery.id,
-    },
+    create: { email: "purchasing@artisanloaf.com", name: "Priya Patel", role: UserRole.PURCHASING_MANAGER, password: demoPassword, bakeryId: bakery.id },
   });
   console.log(`✅ Users: ${[headBaker, floorStaff, purchasingManager].map(u => u.name).join(", ")}`);
 
   // ── Suppliers ────────────────────────────────────────────────────────────
-  const flourSupplier = await prisma.supplier.create({
-    data: { bakeryId: bakery.id, name: "Shipton Mill", contactEmail: "orders@shiptonmill.com", contactPhone: "+44 1453 800123", leadTimeDays: 2, isActive: true, notes: "Organic & heritage flours. Minimum order 25kg." },
-  });
-  const dairySupplier = await prisma.supplier.create({
-    data: { bakeryId: bakery.id, name: "County Dairy Direct", contactEmail: "supply@countydairy.co.uk", contactPhone: "+44 1234 567890", leadTimeDays: 1, isActive: true, notes: "Next-day delivery for butter, cream, milk." },
-  });
-  const eggSupplier = await prisma.supplier.create({
-    data: { bakeryId: bakery.id, name: "Cotswold Free Range", contactEmail: "sales@cotswoldeggs.co.uk", contactPhone: "+44 1285 654321", leadTimeDays: 1, isActive: true, notes: "Free range eggs, delivered in trays of 30." },
-  });
   const chocolateSupplier = await prisma.supplier.create({
     data: { bakeryId: bakery.id, name: "Callebaut UK", contactEmail: "orders@callebaut.co.uk", contactPhone: "+44 20 7946 0958", leadTimeDays: 3, isActive: true, notes: "Belgian couverture chocolate. Min order £50." },
   });
-  const packagingSupplier = await prisma.supplier.create({
-    data: { bakeryId: bakery.id, name: "BakePack Solutions", contactEmail: "hello@bakepack.co.uk", contactPhone: "+44 161 555 0199", leadTimeDays: 5, isActive: true, notes: "Eco-friendly boxes, bags, and labels." },
+  const dairySupplier = await prisma.supplier.create({
+    data: { bakeryId: bakery.id, name: "County Dairy Direct", contactEmail: "supply@countydairy.co.uk", contactPhone: "+44 1234 567890", leadTimeDays: 1, isActive: true, notes: "Next-day delivery for cream, butter, milk." },
   });
-  const fruitSupplier = await prisma.supplier.create({
-    data: { bakeryId: bakery.id, name: "Orchard Fresh", contactEmail: "wholesale@orchardfresh.co.uk", contactPhone: "+44 1234 111222", leadTimeDays: 2, isActive: true, notes: "Seasonal fruit, berries, and citrus zest." },
+  const generalSupplier = await prisma.supplier.create({
+    data: { bakeryId: bakery.id, name: "BakeStock Wholesale", contactEmail: "orders@bakestock.co.uk", contactPhone: "+44 161 555 0100", leadTimeDays: 2, isActive: true, notes: "Dry goods, sugar, flour, gelatin, purees." },
   });
-  console.log(`✅ Suppliers: 6 created`);
+  console.log(`✅ Suppliers: 3 created`);
 
-  // ── Ingredients ──────────────────────────────────────────────────────────
-  const strongFlour = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Strong White Bread Flour", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 45000, reorderThresholdGrams: 15000, criticalThresholdGrams: 5000, costPerKg: 0.85, supplierId: flourSupplier.id, alertLevel: "OK" },
-  });
-  const wholeMealFlour = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Wholemeal Flour", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 8000, reorderThresholdGrams: 10000, criticalThresholdGrams: 3000, costPerKg: 1.10, supplierId: flourSupplier.id, alertLevel: "LOW" },
-  });
-  const ryeFlour = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Dark Rye Flour", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 6000, reorderThresholdGrams: 4000, criticalThresholdGrams: 1500, costPerKg: 1.40, supplierId: flourSupplier.id, alertLevel: "OK" },
+  // ── Ingredients (only what brownies + panna cotta need) ──────────────────
+  const darkChocolate = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Dark Chocolate 70% (Callebaut)", category: IngredientCategory.CHOCOLATE, unit: "kg", stockGrams: 5000, reorderThresholdGrams: 2000, criticalThresholdGrams: 800, costPerKg: 14.50, supplierId: chocolateSupplier.id, alertLevel: "OK" },
   });
   const butter = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Unsalted Butter (82% fat)", category: IngredientCategory.FAT, unit: "kg", stockGrams: 12000, reorderThresholdGrams: 5000, criticalThresholdGrams: 2000, costPerKg: 6.50, supplierId: dairySupplier.id, alertLevel: "OK" },
-  });
-  const wholeMilk = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Whole Milk", category: IngredientCategory.LIQUID, unit: "L", stockGrams: 15000, reorderThresholdGrams: 8000, criticalThresholdGrams: 3000, costPerKg: 1.10, supplierId: dairySupplier.id, alertLevel: "OK" },
-  });
-  const doubleCream = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Double Cream", category: IngredientCategory.DAIRY, unit: "L", stockGrams: 4000, reorderThresholdGrams: 3000, criticalThresholdGrams: 1000, costPerKg: 3.80, supplierId: dairySupplier.id, alertLevel: "LOW" },
-  });
-  const eggs = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Free Range Eggs (Large)", category: IngredientCategory.EGG, unit: "units", stockGrams: 7200, reorderThresholdGrams: 3600, criticalThresholdGrams: 1200, costPerKg: 3.20, supplierId: eggSupplier.id, alertLevel: "OK" },
-  });
-  const instantYeast = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Instant Dried Yeast", category: IngredientCategory.LEAVENING, unit: "g", stockGrams: 3000, reorderThresholdGrams: 800, criticalThresholdGrams: 200, costPerKg: 12.00, alertLevel: "OK" },
-  });
-  const salt = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Fine Sea Salt", category: IngredientCategory.SALT, unit: "g", stockGrams: 8000, reorderThresholdGrams: 2000, criticalThresholdGrams: 500, costPerKg: 1.20, alertLevel: "OK" },
+    data: { bakeryId: bakery.id, name: "Unsalted Butter (82% fat)", category: IngredientCategory.FAT, unit: "kg", stockGrams: 8000, reorderThresholdGrams: 3000, criticalThresholdGrams: 1000, costPerKg: 6.50, supplierId: dairySupplier.id, alertLevel: "OK" },
   });
   const casterSugar = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Caster Sugar", category: IngredientCategory.SWEETENER, unit: "kg", stockGrams: 10000, reorderThresholdGrams: 4000, criticalThresholdGrams: 1500, costPerKg: 0.95, alertLevel: "OK" },
+    data: { bakeryId: bakery.id, name: "Caster Sugar", category: IngredientCategory.SWEETENER, unit: "kg", stockGrams: 10000, reorderThresholdGrams: 3000, criticalThresholdGrams: 1000, costPerKg: 0.95, supplierId: generalSupplier.id, alertLevel: "OK" },
   });
-  const darkChocolate = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Dark Chocolate 70% (Callebaut)", category: IngredientCategory.CHOCOLATE, unit: "kg", stockGrams: 2500, reorderThresholdGrams: 3000, criticalThresholdGrams: 1000, costPerKg: 14.50, supplierId: chocolateSupplier.id, alertLevel: "LOW" },
-  });
-  const vanillaExtract = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Vanilla Extract (Madagascar)", category: IngredientCategory.SPICE, unit: "ml", stockGrams: 500, reorderThresholdGrams: 200, criticalThresholdGrams: 50, costPerKg: 85.00, alertLevel: "OK" },
-  });
-  const cinnamon = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Ground Cinnamon (Ceylon)", category: IngredientCategory.SPICE, unit: "g", stockGrams: 800, reorderThresholdGrams: 300, criticalThresholdGrams: 100, costPerKg: 22.00, alertLevel: "OK" },
-  });
-  const oliveOil = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Extra Virgin Olive Oil", category: IngredientCategory.FAT, unit: "L", stockGrams: 5000, reorderThresholdGrams: 2000, criticalThresholdGrams: 500, costPerKg: 8.50, alertLevel: "OK" },
-  });
-  const frozenRaspberries = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Frozen Raspberries", category: IngredientCategory.FRUIT, unit: "kg", stockGrams: 1500, reorderThresholdGrams: 2000, criticalThresholdGrams: 500, costPerKg: 9.00, supplierId: fruitSupplier.id, alertLevel: "LOW" },
-  });
-  const almondFlour = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Almond Flour (Ground)", category: IngredientCategory.NUT, unit: "kg", stockGrams: 3000, reorderThresholdGrams: 2000, criticalThresholdGrams: 800, costPerKg: 11.00, alertLevel: "OK" },
+  const eggs = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Free Range Eggs (Large)", category: IngredientCategory.EGG, unit: "units", stockGrams: 7200, reorderThresholdGrams: 2400, criticalThresholdGrams: 600, costPerKg: 3.20, supplierId: dairySupplier.id, alertLevel: "OK" },
   });
   const cakeFlour = await prisma.ingredient.create({
-    data: { bakeryId: bakery.id, name: "Cake Flour (Low Protein)", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 8000, reorderThresholdGrams: 4000, criticalThresholdGrams: 1500, costPerKg: 1.20, supplierId: flourSupplier.id, alertLevel: "OK" },
+    data: { bakeryId: bakery.id, name: "Cake Flour (Low Protein)", category: IngredientCategory.FLOUR, unit: "kg", stockGrams: 6000, reorderThresholdGrams: 2000, criticalThresholdGrams: 800, costPerKg: 1.20, supplierId: generalSupplier.id, alertLevel: "OK" },
   });
-  console.log(`✅ Ingredients: 17 created`);
+  const vanillaExtract = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Vanilla Extract (Madagascar)", category: IngredientCategory.SPICE, unit: "ml", stockGrams: 500, reorderThresholdGrams: 150, criticalThresholdGrams: 50, costPerKg: 85.00, supplierId: generalSupplier.id, alertLevel: "OK" },
+  });
+  const salt = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Fine Sea Salt", category: IngredientCategory.SALT, unit: "g", stockGrams: 5000, reorderThresholdGrams: 1000, criticalThresholdGrams: 300, costPerKg: 1.20, supplierId: generalSupplier.id, alertLevel: "OK" },
+  });
+  const heavyCream = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Heavy Cream (35% fat)", category: IngredientCategory.DAIRY, unit: "ml", stockGrams: 5000, reorderThresholdGrams: 2000, criticalThresholdGrams: 500, costPerKg: 4.50, supplierId: dairySupplier.id, alertLevel: "OK" },
+  });
+  const wholeMilk = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Whole Milk", category: IngredientCategory.LIQUID, unit: "ml", stockGrams: 8000, reorderThresholdGrams: 3000, criticalThresholdGrams: 1000, costPerKg: 1.10, supplierId: dairySupplier.id, alertLevel: "OK" },
+  });
+  const gelatinPowder = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Gelatin Powder", category: IngredientCategory.OTHER, unit: "g", stockGrams: 200, reorderThresholdGrams: 80, criticalThresholdGrams: 20, costPerKg: 32.00, supplierId: generalSupplier.id, alertLevel: "OK" },
+  });
+  const mangoPuree = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Mango & Apricot Puree", category: IngredientCategory.FRUIT, unit: "ml", stockGrams: 2000, reorderThresholdGrams: 800, criticalThresholdGrams: 200, costPerKg: 9.50, supplierId: generalSupplier.id, alertLevel: "OK" },
+  });
+  const limeJuice = await prisma.ingredient.create({
+    data: { bakeryId: bakery.id, name: "Fresh Lime Juice", category: IngredientCategory.FRUIT, unit: "ml", stockGrams: 500, reorderThresholdGrams: 200, criticalThresholdGrams: 50, costPerKg: 6.00, supplierId: generalSupplier.id, alertLevel: "OK" },
+  });
+  console.log(`✅ Ingredients: 12 created`);
 
   // ── Recipes ──────────────────────────────────────────────────────────────
-  const sourdoughRecipe = await prisma.recipe.create({
-    data: {
-      bakeryId: bakery.id, name: "Classic Sourdough Loaf", category: RecipeCategory.BREAD,
-      description: "Traditional long-ferment sourdough with a crisp crust and open crumb. Our signature bestseller.",
-      yieldQuantity: 2, yieldUnit: "loaves", batchSizeMultiplier: 1, wastageBufferPercent: 3, shelfLifeHours: 48, isActive: true,
-      ingredients: { create: [
-        { ingredientId: strongFlour.id, quantityGrams: 900, displayUnit: "g" },
-        { ingredientId: salt.id, quantityGrams: 18, displayUnit: "g" },
-      ]},
-      stages: { create: [
-        { order: 1, type: RecipeStageType.MIX, name: "Mix dough", durationMinutes: 20, requiresOven: false },
-        { order: 2, type: RecipeStageType.AUTOLYSE, name: "Autolyse rest", durationMinutes: 30, requiresOven: false },
-        { order: 3, type: RecipeStageType.BULK_FERMENT, name: "Bulk fermentation", durationMinutes: 240, requiresOven: false },
-        { order: 4, type: RecipeStageType.SHAPE, name: "Shape loaves", durationMinutes: 20, requiresOven: false },
-        { order: 5, type: RecipeStageType.RETARD, name: "Overnight retard", durationMinutes: 720, requiresOven: false },
-        { order: 6, type: RecipeStageType.BAKE, name: "Bake in dutch oven", durationMinutes: 45, requiresOven: true, ovenTempCelsius: 250 },
-        { order: 7, type: RecipeStageType.COOL, name: "Cool on rack", durationMinutes: 60, requiresOven: false },
-      ]},
-    },
-  });
 
-  const croissantRecipe = await prisma.recipe.create({
-    data: {
-      bakeryId: bakery.id, name: "Butter Croissant", category: RecipeCategory.VIENNOISERIE,
-      description: "Classic laminated pastry with 27 layers of butter. Light, flaky, and golden.",
-      yieldQuantity: 12, yieldUnit: "croissants", batchSizeMultiplier: 1, wastageBufferPercent: 5, shelfLifeHours: 12, isActive: true,
-      ingredients: { create: [
-        { ingredientId: strongFlour.id, quantityGrams: 500, displayUnit: "g" },
-        { ingredientId: butter.id, quantityGrams: 280, displayUnit: "g" },
-        { ingredientId: instantYeast.id, quantityGrams: 10, displayUnit: "g" },
-        { ingredientId: salt.id, quantityGrams: 10, displayUnit: "g" },
-        { ingredientId: eggs.id, quantityGrams: 55, displayUnit: "g" },
-        { ingredientId: wholeMilk.id, quantityGrams: 150, displayUnit: "ml" },
-        { ingredientId: casterSugar.id, quantityGrams: 50, displayUnit: "g" },
-      ]},
-      stages: { create: [
-        { order: 1, type: RecipeStageType.MIX, name: "Make détrempe", durationMinutes: 15, requiresOven: false },
-        { order: 2, type: RecipeStageType.RETARD, name: "Chill dough", durationMinutes: 60, requiresOven: false },
-        { order: 3, type: RecipeStageType.SHAPE, name: "Laminate & fold (3 turns)", durationMinutes: 45, requiresOven: false },
-        { order: 4, type: RecipeStageType.RETARD, name: "Rest between folds", durationMinutes: 30, requiresOven: false },
-        { order: 5, type: RecipeStageType.SHAPE, name: "Cut & shape croissants", durationMinutes: 20, requiresOven: false },
-        { order: 6, type: RecipeStageType.PROOF, name: "Final proof at 27°C", durationMinutes: 120, requiresOven: false },
-        { order: 7, type: RecipeStageType.BAKE, name: "Bake until golden", durationMinutes: 18, requiresOven: true, ovenTempCelsius: 190 },
-        { order: 8, type: RecipeStageType.COOL, name: "Cool on rack", durationMinutes: 20, requiresOven: false },
-      ]},
-    },
-  });
-
-  const cinnamonRolls = await prisma.recipe.create({
-    data: {
-      bakeryId: bakery.id, name: "Cinnamon Swirl Rolls", category: RecipeCategory.VIENNOISERIE,
-      description: "Soft enriched dough rolled with cinnamon sugar and topped with cream cheese glaze.",
-      yieldQuantity: 12, yieldUnit: "rolls", batchSizeMultiplier: 1, wastageBufferPercent: 4, shelfLifeHours: 24, isActive: true,
-      ingredients: { create: [
-        { ingredientId: strongFlour.id, quantityGrams: 600, displayUnit: "g" },
-        { ingredientId: butter.id, quantityGrams: 100, displayUnit: "g" },
-        { ingredientId: casterSugar.id, quantityGrams: 120, displayUnit: "g" },
-        { ingredientId: cinnamon.id, quantityGrams: 15, displayUnit: "g" },
-        { ingredientId: eggs.id, quantityGrams: 110, displayUnit: "g" },
-        { ingredientId: wholeMilk.id, quantityGrams: 200, displayUnit: "ml" },
-        { ingredientId: instantYeast.id, quantityGrams: 8, displayUnit: "g" },
-      ]},
-      stages: { create: [
-        { order: 1, type: RecipeStageType.MIX, name: "Mix enriched dough", durationMinutes: 15, requiresOven: false },
-        { order: 2, type: RecipeStageType.BULK_FERMENT, name: "First rise", durationMinutes: 90, requiresOven: false },
-        { order: 3, type: RecipeStageType.SHAPE, name: "Roll, fill, cut into 12 rolls", durationMinutes: 20, requiresOven: false },
-        { order: 4, type: RecipeStageType.PROOF, name: "Second rise", durationMinutes: 45, requiresOven: false },
-        { order: 5, type: RecipeStageType.BAKE, name: "Bake", durationMinutes: 22, requiresOven: true, ovenTempCelsius: 180 },
-        { order: 6, type: RecipeStageType.COOL, name: "Cool and glaze", durationMinutes: 15, requiresOven: false },
-      ]},
-    },
-  });
-
-  const focaccia = await prisma.recipe.create({
-    data: {
-      bakeryId: bakery.id, name: "Rosemary Focaccia", category: RecipeCategory.BREAD,
-      description: "High-hydration Italian flatbread with olive oil, sea salt, and fresh rosemary.",
-      yieldQuantity: 1, yieldUnit: "tray (12 portions)", batchSizeMultiplier: 1, wastageBufferPercent: 3, shelfLifeHours: 24, isActive: true,
-      ingredients: { create: [
-        { ingredientId: strongFlour.id, quantityGrams: 500, displayUnit: "g" },
-        { ingredientId: oliveOil.id, quantityGrams: 80, displayUnit: "ml" },
-        { ingredientId: salt.id, quantityGrams: 12, displayUnit: "g" },
-        { ingredientId: instantYeast.id, quantityGrams: 5, displayUnit: "g" },
-      ]},
-      stages: { create: [
-        { order: 1, type: RecipeStageType.MIX, name: "Mix wet dough", durationMinutes: 10, requiresOven: false },
-        { order: 2, type: RecipeStageType.BULK_FERMENT, name: "Bulk ferment with folds", durationMinutes: 180, requiresOven: false },
-        { order: 3, type: RecipeStageType.SHAPE, name: "Oil pan, stretch dough, dimple", durationMinutes: 15, requiresOven: false },
-        { order: 4, type: RecipeStageType.PROOF, name: "Final proof", durationMinutes: 30, requiresOven: false },
-        { order: 5, type: RecipeStageType.BAKE, name: "Bake until golden", durationMinutes: 25, requiresOven: true, ovenTempCelsius: 220 },
-        { order: 6, type: RecipeStageType.COOL, name: "Rest 5 min, slice", durationMinutes: 10, requiresOven: false },
-      ]},
-    },
-  });
-
-  const chocolateBrownies = await prisma.recipe.create({
+  // 1. Dark Chocolate Brownies (16 squares)
+  const brownieRecipe = await prisma.recipe.create({
     data: {
       bakeryId: bakery.id, name: "Dark Chocolate Brownies", category: RecipeCategory.CAKE,
-      description: "Rich, fudgy brownies made with 70% Belgian chocolate. Cut into 16 squares.",
+      description: "Rich, fudgy brownies made with 70% Belgian chocolate and a pinch of sea salt. Cut into 16 squares.",
       yieldQuantity: 16, yieldUnit: "squares", batchSizeMultiplier: 1, wastageBufferPercent: 2, shelfLifeHours: 72, isActive: true,
       ingredients: { create: [
         { ingredientId: darkChocolate.id, quantityGrams: 300, displayUnit: "g" },
@@ -246,17 +109,45 @@ async function main() {
         { ingredientId: eggs.id, quantityGrams: 220, displayUnit: "g" },
         { ingredientId: cakeFlour.id, quantityGrams: 130, displayUnit: "g" },
         { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "ml" },
+        { ingredientId: salt.id, quantityGrams: 3, displayUnit: "g" },
       ]},
       stages: { create: [
         { order: 1, type: RecipeStageType.MIX, name: "Melt chocolate & butter", durationMinutes: 10, requiresOven: false },
-        { order: 2, type: RecipeStageType.MIX, name: "Whisk eggs, sugar, vanilla", durationMinutes: 5, requiresOven: false },
+        { order: 2, type: RecipeStageType.MIX, name: "Whisk eggs, sugar, vanilla, salt", durationMinutes: 5, requiresOven: false },
         { order: 3, type: RecipeStageType.MIX, name: "Fold together with flour", durationMinutes: 5, requiresOven: false },
         { order: 4, type: RecipeStageType.BAKE, name: "Bake (slightly underdone centre)", durationMinutes: 28, requiresOven: true, ovenTempCelsius: 170 },
         { order: 5, type: RecipeStageType.COOL, name: "Cool completely before cutting", durationMinutes: 60, requiresOven: false },
       ]},
     },
   });
-  console.log(`✅ Recipes: 5 created`);
+
+  // 2. Mango & Apricot Panna Cotta (2 servings)
+  const pannaCottaRecipe = await prisma.recipe.create({
+    data: {
+      bakeryId: bakery.id, name: "Mango & Apricot Panna Cotta", category: RecipeCategory.OTHER,
+      description: "Silky vanilla cream panna cotta topped with a set mango & apricot fruit jelly layer. Served chilled.",
+      yieldQuantity: 2, yieldUnit: "servings", batchSizeMultiplier: 1, wastageBufferPercent: 3, shelfLifeHours: 48, isActive: true,
+      ingredients: { create: [
+        { ingredientId: heavyCream.id, quantityGrams: 240, displayUnit: "ml" },
+        { ingredientId: wholeMilk.id, quantityGrams: 120, displayUnit: "ml" },
+        { ingredientId: casterSugar.id, quantityGrams: 50, displayUnit: "g" },
+        { ingredientId: gelatinPowder.id, quantityGrams: 4.5, displayUnit: "g" },
+        { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "ml" },
+        { ingredientId: mangoPuree.id, quantityGrams: 120, displayUnit: "ml" },
+        { ingredientId: limeJuice.id, quantityGrams: 5, displayUnit: "ml" },
+      ]},
+      stages: { create: [
+        { order: 1, type: RecipeStageType.MIX, name: "Bloom gelatin for base", durationMinutes: 10, requiresOven: false },
+        { order: 2, type: RecipeStageType.MIX, name: "Heat cream base", durationMinutes: 8, requiresOven: false },
+        { order: 3, type: RecipeStageType.MIX, name: "Dissolve gelatin, add vanilla", durationMinutes: 3, requiresOven: false },
+        { order: 4, type: RecipeStageType.COOL, name: "Strain into glasses, refrigerate 4 hours", durationMinutes: 240, requiresOven: false },
+        { order: 5, type: RecipeStageType.MIX, name: "Bloom gelatin for fruit layer", durationMinutes: 10, requiresOven: false },
+        { order: 6, type: RecipeStageType.MIX, name: "Warm puree, melt gelatin, add lime", durationMinutes: 5, requiresOven: false },
+        { order: 7, type: RecipeStageType.COOL, name: "Pour fruit layer, refrigerate 1-2 hours", durationMinutes: 120, requiresOven: false },
+      ]},
+    },
+  });
+  console.log(`✅ Recipes: 2 created`);
 
   // ── Orders ───────────────────────────────────────────────────────────────
   const tomorrow = new Date();
@@ -271,23 +162,10 @@ async function main() {
     data: {
       bakeryId: bakery.id, channel: OrderChannel.WHOLESALE, status: OrderStatus.CONFIRMED,
       customerName: "Bloom & Bean Café", customerEmail: "orders@bloomandbean.com",
-      fulfilmentDate: tomorrow, totalValue: 148.50, notes: "Weekly standing order — delivery by 07:30",
+      fulfilmentDate: tomorrow, totalValue: 96.00, notes: "Weekly standing order — delivery by 07:30",
       lineItems: { create: [
-        { productId: "prod_sourdough", productName: "Classic Sourdough Loaf", quantity: 12, unitPrice: 7.50 },
-        { productId: "prod_croissant", productName: "Butter Croissant", quantity: 24, unitPrice: 2.25 },
-      ]},
-    },
-  });
-
-  await prisma.order.create({
-    data: {
-      bakeryId: bakery.id, channel: OrderChannel.WHOLESALE, status: OrderStatus.CONFIRMED,
-      customerName: "The Green Pantry", customerEmail: "kitchen@greenpantry.co.uk",
-      fulfilmentDate: tomorrow, totalValue: 92.00, notes: "New weekly account — trial order",
-      lineItems: { create: [
-        { productId: "prod_focaccia", productName: "Rosemary Focaccia", quantity: 8, unitPrice: 4.50 },
-        { productId: "prod_sourdough", productName: "Classic Sourdough Loaf", quantity: 6, unitPrice: 7.50 },
-        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 3, unitPrice: 6.00 },
+        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 16)", quantity: 3, unitPrice: 18.00 },
+        { productId: "prod_pannacotta", productName: "Mango & Apricot Panna Cotta", quantity: 12, unitPrice: 3.50 },
       ]},
     },
   });
@@ -295,24 +173,11 @@ async function main() {
   await prisma.order.create({
     data: {
       bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.PENDING,
-      customerName: "James Harrington", customerEmail: "jharrington@email.com",
-      fulfilmentDate: tomorrow, totalValue: 32.50,
-      lineItems: { create: [
-        { productId: "prod_sourdough", productName: "Classic Sourdough Loaf", quantity: 2, unitPrice: 7.50 },
-        { productId: "prod_cinnamon", productName: "Cinnamon Swirl Rolls (6 pack)", quantity: 1, unitPrice: 9.50 },
-        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 1, unitPrice: 8.00 },
-      ]},
-    },
-  });
-
-  await prisma.order.create({
-    data: {
-      bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.CONFIRMED,
       customerName: "Sophie Williams", customerEmail: "sophie.w@gmail.com",
-      fulfilmentDate: tomorrow, totalValue: 27.00,
+      fulfilmentDate: tomorrow, totalValue: 25.00,
       lineItems: { create: [
-        { productId: "prod_croissant", productName: "Butter Croissant", quantity: 6, unitPrice: 2.50 },
-        { productId: "prod_cinnamon", productName: "Cinnamon Swirl Rolls (6 pack)", quantity: 1, unitPrice: 9.50 },
+        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 2, unitPrice: 8.00 },
+        { productId: "prod_pannacotta", productName: "Mango & Apricot Panna Cotta", quantity: 2, unitPrice: 4.50 },
       ]},
     },
   });
@@ -321,36 +186,22 @@ async function main() {
     data: {
       bakeryId: bakery.id, channel: OrderChannel.MANUAL, status: OrderStatus.CONFIRMED,
       customerName: "London Fields Hotel", customerEmail: "events@londonfieldshotel.co.uk",
-      fulfilmentDate: dayAfter, totalValue: 285.00, notes: "Conference catering — 50 pax breakfast. Deliver by 7am.",
+      fulfilmentDate: dayAfter, totalValue: 180.00, notes: "Conference dessert platter — 40 pax",
       lineItems: { create: [
-        { productId: "prod_croissant", productName: "Butter Croissant", quantity: 50, unitPrice: 2.50 },
-        { productId: "prod_cinnamon", productName: "Cinnamon Swirl Rolls", quantity: 30, unitPrice: 3.00 },
-        { productId: "prod_brownie", productName: "Dark Chocolate Brownies", quantity: 25, unitPrice: 2.00 },
+        { productId: "prod_brownie", productName: "Dark Chocolate Brownies", quantity: 32, unitPrice: 2.50 },
+        { productId: "prod_pannacotta", productName: "Mango & Apricot Panna Cotta", quantity: 20, unitPrice: 4.00 },
       ]},
     },
   });
 
   await prisma.order.create({
     data: {
-      bakeryId: bakery.id, channel: OrderChannel.WHOLESALE, status: OrderStatus.CONFIRMED,
-      customerName: "Riverside Deli", customerEmail: "orders@riversidedeli.co.uk",
-      fulfilmentDate: dayAfter, totalValue: 67.50,
-      lineItems: { create: [
-        { productId: "prod_sourdough", productName: "Classic Sourdough Loaf", quantity: 4, unitPrice: 7.50 },
-        { productId: "prod_focaccia", productName: "Rosemary Focaccia", quantity: 5, unitPrice: 4.50 },
-        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 3, unitPrice: 6.00 },
-      ]},
-    },
-  });
-
-  await prisma.order.create({
-    data: {
-      bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.PENDING,
+      bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.CONFIRMED,
       customerName: "David & Maria Chen", customerEmail: "david.chen@proton.me",
-      fulfilmentDate: dayAfter, totalValue: 45.00, notes: "Birthday celebration — extra packaging please",
+      fulfilmentDate: dayAfter, totalValue: 32.00, notes: "Birthday celebration",
       lineItems: { create: [
-        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 16)", quantity: 2, unitPrice: 16.00 },
-        { productId: "prod_cinnamon", productName: "Cinnamon Swirl Rolls (12 pack)", quantity: 1, unitPrice: 13.00 },
+        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 16)", quantity: 1, unitPrice: 18.00 },
+        { productId: "prod_pannacotta", productName: "Mango & Apricot Panna Cotta (6 pack)", quantity: 1, unitPrice: 14.00 },
       ]},
     },
   });
@@ -359,45 +210,32 @@ async function main() {
     data: {
       bakeryId: bakery.id, channel: OrderChannel.POS, status: OrderStatus.IN_PRODUCTION,
       customerName: "Walk-in (counter)", customerEmail: null,
-      fulfilmentDate: new Date(), totalValue: 18.50, notes: "Collected at counter",
+      fulfilmentDate: new Date(), totalValue: 12.50, notes: "Collected at counter",
       lineItems: { create: [
-        { productId: "prod_sourdough", productName: "Classic Sourdough Loaf", quantity: 1, unitPrice: 7.50 },
-        { productId: "prod_croissant", productName: "Butter Croissant", quantity: 3, unitPrice: 2.50 },
-        { productId: "prod_cinnamon", productName: "Cinnamon Swirl Roll", quantity: 1, unitPrice: 3.50 },
+        { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 1, unitPrice: 8.00 },
+        { productId: "prod_pannacotta", productName: "Mango & Apricot Panna Cotta", quantity: 1, unitPrice: 4.50 },
       ]},
     },
   });
-  console.log(`✅ Orders: 8 created`);
+  console.log(`✅ Orders: 5 created`);
 
   // ── Agent Alerts ─────────────────────────────────────────────────────────
   await prisma.agentAlert.createMany({
     data: [
       {
         bakeryId: bakery.id, type: "SHORTFALL", severity: "WARNING",
-        title: "Wholemeal Flour running low",
-        message: "Current stock (8 kg) is below the reorder threshold of 10 kg. Recommended order: 15 kg from Shipton Mill (2-day lead time).",
-        relatedEntityId: wholeMealFlour.id, relatedEntityType: "Ingredient",
-      },
-      {
-        bakeryId: bakery.id, type: "SHORTFALL", severity: "WARNING",
-        title: "Dark Chocolate below reorder level",
-        message: "Current stock (2.5 kg) is below the reorder threshold of 3 kg. Next batch of brownies requires 300g per batch. Order from Callebaut UK (3-day lead time).",
-        relatedEntityId: darkChocolate.id, relatedEntityType: "Ingredient",
-      },
-      {
-        bakeryId: bakery.id, type: "SHORTFALL", severity: "WARNING",
-        title: "Frozen Raspberries running low",
-        message: "Current stock (1.5 kg) is below the reorder threshold of 2 kg. Seasonal availability may cause delays — order early.",
-        relatedEntityId: frozenRaspberries.id, relatedEntityType: "Ingredient",
+        title: "Gelatin Powder stock low",
+        message: "Current stock (200g) is above reorder but heavy upcoming demand for panna cotta (conference order: 20 servings = 45g gelatin) may push below threshold.",
+        relatedEntityId: gelatinPowder.id, relatedEntityType: "Ingredient",
       },
       {
         bakeryId: bakery.id, type: "PROCUREMENT", severity: "INFO",
         title: "Large conference order received",
-        message: "London Fields Hotel placed an order for 50 croissants + 30 cinnamon rolls + 25 brownies for day after tomorrow. Verify stock levels cover this demand.",
+        message: "London Fields Hotel placed an order for 32 brownies + 20 panna cottas for day after tomorrow. Verify stock levels cover this demand.",
       },
     ],
   });
-  console.log(`✅ Alerts: 4 created`);
+  console.log(`✅ Alerts: 2 created`);
 
   // ── Production Schedule (today) ──────────────────────────────────────────
   const today = new Date();
@@ -405,155 +243,140 @@ async function main() {
 
   const schedule = await prisma.productionSchedule.create({
     data: {
-      bakeryId:                    bakery.id,
-      scheduleDate:                scheduleDate,
-      shiftType:                   ShiftType.MORNING,
-      isAutoGenerated:             true,
-      isApproved:                  true,
-      approvedById:                headBaker.id,
-      approvedAt:                  new Date(),
-      totalOvenUtilizationPercent: 82,
-      aiNotes:                     "Morning shift: 3 batches scheduled. Sourdough is priority for wholesale (Bloom & Bean + Green Pantry). Croissants running as double batch for retail demand + Sophie Williams order. Focaccia added for Green Pantry trial. Oven utilisation 82% — tight but manageable with staggered bake times.",
+      bakeryId: bakery.id, scheduleDate, shiftType: ShiftType.MORNING,
+      isAutoGenerated: true, isApproved: true, approvedById: headBaker.id, approvedAt: new Date(),
+      totalOvenUtilizationPercent: 33,
+      aiNotes: "Morning shift: 2 batches scheduled. Brownies for Bloom & Bean + Sophie Williams orders. Panna cotta base needs 4h set time so started early for same-day fruit layer assembly.",
     },
   });
 
-  const sourdoughBatch = await prisma.productionBatch.create({
+  // Batch 1: Brownies (3 batches = 48 squares for wholesale + retail)
+  const brownieBatch = await prisma.productionBatch.create({
     data: {
-      scheduleId: schedule.id, recipeId: sourdoughRecipe.id, shiftType: ShiftType.MORNING,
-      status: "IN_PROGRESS", quantity: 10, scaleFactor: 5,
+      scheduleId: schedule.id, recipeId: brownieRecipe.id, shiftType: ShiftType.MORNING,
+      status: "IN_PROGRESS", quantity: 48, scaleFactor: 3,
+      plannedStartTime: new Date(scheduleDate.getTime() + 6 * 60 * 60 * 1000),
+      plannedEndTime: new Date(scheduleDate.getTime() + 8 * 60 * 60 * 1000),
+      ovenSlots: 1, notes: "3x batch — 48 squares for café order + retail",
+    },
+  });
+
+  // Batch 2: Panna Cotta (7x batch = 14 servings)
+  const pannaCottaBatch = await prisma.productionBatch.create({
+    data: {
+      scheduleId: schedule.id, recipeId: pannaCottaRecipe.id, shiftType: ShiftType.MORNING,
+      status: "SCHEDULED", quantity: 14, scaleFactor: 7,
       plannedStartTime: new Date(scheduleDate.getTime() + 5.5 * 60 * 60 * 1000),
       plannedEndTime: new Date(scheduleDate.getTime() + 12 * 60 * 60 * 1000),
-      ovenSlots: 2, notes: "5x batch — 10 loaves for wholesale orders + retail buffer",
+      ovenSlots: 0, notes: "7x batch — 14 panna cottas (12 for café + 2 for Sophie)",
     },
   });
 
-  const croissantBatch = await prisma.productionBatch.create({
-    data: {
-      scheduleId: schedule.id, recipeId: croissantRecipe.id, shiftType: ShiftType.MORNING,
-      status: "SCHEDULED", quantity: 36, scaleFactor: 3,
-      plannedStartTime: new Date(scheduleDate.getTime() + 6 * 60 * 60 * 1000),
-      plannedEndTime: new Date(scheduleDate.getTime() + 11 * 60 * 60 * 1000),
-      ovenSlots: 1, notes: "Triple batch — 36 croissants (wholesale 24 + retail 6 + buffer 6)",
-    },
-  });
-
-  const focacciaBatch = await prisma.productionBatch.create({
-    data: {
-      scheduleId: schedule.id, recipeId: focaccia.id, shiftType: ShiftType.MORNING,
-      status: "SCHEDULED", quantity: 8, scaleFactor: 8,
-      plannedStartTime: new Date(scheduleDate.getTime() + 7 * 60 * 60 * 1000),
-      plannedEndTime: new Date(scheduleDate.getTime() + 11.5 * 60 * 60 * 1000),
-      ovenSlots: 1, notes: "8 trays for Green Pantry trial order",
-    },
-  });
-
-  // Checklists
-  await prisma.checklistItem.createMany({
-    data: [
-      { batchId: sourdoughBatch.id, order: 1, description: "Weigh 4.5 kg Strong White Bread Flour into mixing bowl", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: strongFlour.id, deductionGrams: 4500 },
-      { batchId: sourdoughBatch.id, order: 2, description: "Add 90g Fine Sea Salt and 3L water", status: "DONE", completedById: floorStaff.id, completedAt: new Date(), ingredientId: salt.id, deductionGrams: 90 },
-      { batchId: sourdoughBatch.id, order: 3, description: "Mix on low speed 10 min, medium 5 min", status: "DONE", completedById: floorStaff.id, completedAt: new Date() },
-      { batchId: sourdoughBatch.id, order: 4, description: "Autolyse rest — cover and leave 30 min", status: "IN_PROGRESS" },
-      { batchId: sourdoughBatch.id, order: 5, description: "Bulk ferment at 25°C for 4 hours (stretch & fold every 45 min)", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 6, description: "Divide into 10 pieces, pre-shape rounds", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 7, description: "Bench rest 20 min, final shape into bannetons", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 8, description: "Cold retard (if overnight) or final proof 1 hour", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 9, description: "Score loaves, load into oven at 250°C with steam", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 10, description: "Bake 25 min with steam, 20 min vented", status: "PENDING" },
-      { batchId: sourdoughBatch.id, order: 11, description: "Cool on wire rack 60 min — do not bag hot", status: "PENDING" },
-    ],
-  });
-
-  // Croissant step 1 has multiple ingredients — use ChecklistDeduction
-  const croissantStep1 = await prisma.checklistItem.create({
-    data: {
-      batchId: croissantBatch.id, order: 1,
-      description: "Weigh 1.5 kg Strong White Bread Flour, 30g Instant Dried Yeast, 30g Fine Sea Salt, 165g Eggs, 450ml Whole Milk, 150g Caster Sugar",
-      status: "PENDING",
-    },
+  // Brownie checklist with deductions
+  const brownieStep1 = await prisma.checklistItem.create({
+    data: { batchId: brownieBatch.id, order: 1, description: "Melt 900g Dark Chocolate 70% and 750g Unsalted Butter together (double boiler or microwave in 30s bursts)", status: "DONE", completedById: floorStaff.id, completedAt: new Date() },
   });
   await prisma.checklistDeduction.createMany({
     data: [
-      { checklistItemId: croissantStep1.id, ingredientId: strongFlour.id, deductionGrams: 1500 },
-      { checklistItemId: croissantStep1.id, ingredientId: instantYeast.id, deductionGrams: 30 },
-      { checklistItemId: croissantStep1.id, ingredientId: salt.id, deductionGrams: 30 },
-      { checklistItemId: croissantStep1.id, ingredientId: eggs.id, deductionGrams: 165 },
-      { checklistItemId: croissantStep1.id, ingredientId: wholeMilk.id, deductionGrams: 450 },
-      { checklistItemId: croissantStep1.id, ingredientId: casterSugar.id, deductionGrams: 150 },
+      { checklistItemId: brownieStep1.id, ingredientId: darkChocolate.id, deductionGrams: 900 },
+      { checklistItemId: brownieStep1.id, ingredientId: butter.id, deductionGrams: 750 },
     ],
   });
 
-  await prisma.checklistItem.createMany({
-    data: [
-      { batchId: croissantBatch.id, order: 2, description: "Mix détrempe — 15 min on medium speed until smooth", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 3, description: "Wrap and chill détrempe 1 hour", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 4, description: "Prepare 840g Unsalted Butter block (pound flat, 20×20cm)", status: "PENDING", ingredientId: butter.id, deductionGrams: 840 },
-      { batchId: croissantBatch.id, order: 5, description: "Enclose butter, first letter fold", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 6, description: "Rest 30 min, second fold, rest 30 min, third fold", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 7, description: "Roll to 4mm, cut 36 triangles", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 8, description: "Shape croissants, place on lined trays", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 9, description: "Egg wash with Free Range Eggs, proof at 27°C for 2 hours until doubled", status: "PENDING", ingredientId: eggs.id, deductionGrams: 165 },
-      { batchId: croissantBatch.id, order: 10, description: "Second egg wash, bake at 190°C for 18 minutes", status: "PENDING" },
-      { batchId: croissantBatch.id, order: 11, description: "Cool on rack — do not stack", status: "PENDING" },
-    ],
-  });
-
-  // Focaccia step 1 has multiple ingredients
-  const focacciaStep1 = await prisma.checklistItem.create({
-    data: {
-      batchId: focacciaBatch.id, order: 1,
-      description: "Weigh 4 kg Strong White Bread Flour, 640ml Extra Virgin Olive Oil, 96g Fine Sea Salt, 40g Instant Dried Yeast",
-      status: "PENDING",
-    },
+  const brownieStep2 = await prisma.checklistItem.create({
+    data: { batchId: brownieBatch.id, order: 2, description: "Whisk 660g Free Range Eggs, 1050g Caster Sugar, 15ml Vanilla Extract, and 9g Fine Sea Salt until lighter in colour", status: "IN_PROGRESS" },
   });
   await prisma.checklistDeduction.createMany({
     data: [
-      { checklistItemId: focacciaStep1.id, ingredientId: strongFlour.id, deductionGrams: 4000 },
-      { checklistItemId: focacciaStep1.id, ingredientId: oliveOil.id, deductionGrams: 640 },
-      { checklistItemId: focacciaStep1.id, ingredientId: salt.id, deductionGrams: 96 },
-      { checklistItemId: focacciaStep1.id, ingredientId: instantYeast.id, deductionGrams: 40 },
+      { checklistItemId: brownieStep2.id, ingredientId: eggs.id, deductionGrams: 660 },
+      { checklistItemId: brownieStep2.id, ingredientId: casterSugar.id, deductionGrams: 1050 },
+      { checklistItemId: brownieStep2.id, ingredientId: vanillaExtract.id, deductionGrams: 15 },
+      { checklistItemId: brownieStep2.id, ingredientId: salt.id, deductionGrams: 9 },
     ],
+  });
+
+  await prisma.checklistItem.create({
+    data: { batchId: brownieBatch.id, order: 3, description: "Fold melted chocolate into egg mixture, then sift in 390g Cake Flour — fold until just combined", status: "PENDING", ingredientId: cakeFlour.id, deductionGrams: 390 },
   });
 
   await prisma.checklistItem.createMany({
     data: [
-      { batchId: focacciaBatch.id, order: 2, description: "Mix high-hydration dough (80% water)", status: "PENDING" },
-      { batchId: focacciaBatch.id, order: 3, description: "Bulk ferment 3 hours — fold every 45 min", status: "PENDING" },
-      { batchId: focacciaBatch.id, order: 4, description: "Oil 8 trays with Extra Virgin Olive Oil, divide dough, stretch to fill", status: "PENDING", ingredientId: oliveOil.id, deductionGrams: 640 },
-      { batchId: focacciaBatch.id, order: 5, description: "Dimple, drizzle oil, add rosemary & flaky salt", status: "PENDING" },
-      { batchId: focacciaBatch.id, order: 6, description: "Final proof 30 min", status: "PENDING" },
-      { batchId: focacciaBatch.id, order: 7, description: "Bake at 220°C for 25 min until deep golden", status: "PENDING" },
-      { batchId: focacciaBatch.id, order: 8, description: "Rest 5 min in pan, then transfer to cooling rack", status: "PENDING" },
+      { batchId: brownieBatch.id, order: 4, description: "Pour into 3 lined 23cm square tins, spread evenly", status: "PENDING" },
+      { batchId: brownieBatch.id, order: 5, description: "Bake at 170°C for 28 minutes — centre should still wobble slightly", status: "PENDING" },
+      { batchId: brownieBatch.id, order: 6, description: "Cool completely in tin (minimum 1 hour) before cutting into 16 squares each", status: "PENDING" },
     ],
   });
-  console.log(`✅ Production schedule: 3 batches, 30 checklist items`);
+
+  // Panna cotta checklist with deductions
+  const pcStep1 = await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 1, description: "Bloom 21g Gelatin Powder in 105ml cold water — leave 5-10 min until soft", status: "PENDING" },
+  });
+  await prisma.checklistDeduction.createMany({
+    data: [
+      { checklistItemId: pcStep1.id, ingredientId: gelatinPowder.id, deductionGrams: 21 },
+    ],
+  });
+
+  const pcStep2 = await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 2, description: "Heat 1680ml Heavy Cream, 840ml Whole Milk, and 350g Caster Sugar — stir until dissolved, don't boil", status: "PENDING" },
+  });
+  await prisma.checklistDeduction.createMany({
+    data: [
+      { checklistItemId: pcStep2.id, ingredientId: heavyCream.id, deductionGrams: 1680 },
+      { checklistItemId: pcStep2.id, ingredientId: wholeMilk.id, deductionGrams: 840 },
+      { checklistItemId: pcStep2.id, ingredientId: casterSugar.id, deductionGrams: 350 },
+    ],
+  });
+
+  await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 3, description: "Stir bloomed gelatin into hot cream until smooth, add 35ml Vanilla Extract", status: "PENDING", ingredientId: vanillaExtract.id, deductionGrams: 35 },
+  });
+
+  await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 4, description: "Strain into 14 serving glasses (2/3 full), refrigerate 4 hours. Cover with cling wrap if storing overnight without fruit layer.", status: "PENDING" },
+  });
+
+  const pcStep5 = await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 5, description: "Bloom 10.5g Gelatin Powder in 105ml cold water for fruit jelly layer", status: "PENDING" },
+  });
+  await prisma.checklistDeduction.createMany({
+    data: [
+      { checklistItemId: pcStep5.id, ingredientId: gelatinPowder.id, deductionGrams: 10.5 },
+    ],
+  });
+
+  const pcStep6 = await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 6, description: "Warm 840ml Mango & Apricot Puree, melt gelatin into it, add 35ml Fresh Lime Juice", status: "PENDING" },
+  });
+  await prisma.checklistDeduction.createMany({
+    data: [
+      { checklistItemId: pcStep6.id, ingredientId: mangoPuree.id, deductionGrams: 840 },
+      { checklistItemId: pcStep6.id, ingredientId: limeJuice.id, deductionGrams: 35 },
+    ],
+  });
+
+  await prisma.checklistItem.create({
+    data: { batchId: pannaCottaBatch.id, order: 7, description: "Pour fruit layer gently over set base, refrigerate 1-2 hours until set", status: "PENDING" },
+  });
+
+  console.log(`✅ Production schedule: 2 batches, 13 checklist items`);
 
   // ── Procurement Recommendations ──────────────────────────────────────────
   await prisma.procurementRecommendation.createMany({
     data: [
       {
-        bakeryId: bakery.id, ingredientId: wholeMealFlour.id,
-        currentStockGrams: 8000, requiredGrams: 10000, shortfallGrams: 2000, recommendedOrderGrams: 15000,
-        supplierId: flourSupplier.id, estimatedCost: 16.50, urgency: "HIGH",
-      },
-      {
         bakeryId: bakery.id, ingredientId: darkChocolate.id,
-        currentStockGrams: 2500, requiredGrams: 3000, shortfallGrams: 500, recommendedOrderGrams: 5000,
-        supplierId: chocolateSupplier.id, estimatedCost: 72.50, urgency: "MEDIUM",
+        currentStockGrams: 5000, requiredGrams: 2000, shortfallGrams: 0, recommendedOrderGrams: 5000,
+        supplierId: chocolateSupplier.id, estimatedCost: 72.50, urgency: "LOW",
       },
       {
-        bakeryId: bakery.id, ingredientId: frozenRaspberries.id,
-        currentStockGrams: 1500, requiredGrams: 2000, shortfallGrams: 500, recommendedOrderGrams: 4000,
-        supplierId: fruitSupplier.id, estimatedCost: 36.00, urgency: "MEDIUM",
-      },
-      {
-        bakeryId: bakery.id, ingredientId: doubleCream.id,
-        currentStockGrams: 4000, requiredGrams: 3000, shortfallGrams: 0, recommendedOrderGrams: 6000,
-        supplierId: dairySupplier.id, estimatedCost: 22.80, urgency: "LOW",
+        bakeryId: bakery.id, ingredientId: mangoPuree.id,
+        currentStockGrams: 2000, requiredGrams: 800, shortfallGrams: 0, recommendedOrderGrams: 3000,
+        supplierId: generalSupplier.id, estimatedCost: 28.50, urgency: "MEDIUM",
       },
     ],
   });
-  console.log(`✅ Procurement recommendations: 4 created`);
+  console.log(`✅ Procurement recommendations: 2 created`);
 
   console.log("\n🎉 Seed complete!");
 }
