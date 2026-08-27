@@ -122,9 +122,6 @@ export async function POST(req: NextRequest) {
     const limeJuice = await db.ingredient.create({
       data: { bakeryId: bakery.id, name: "Fresh Lime Juice", category: IngredientCategory.FRUIT, unit: "ml", stockGrams: 500, reorderThresholdGrams: 200, criticalThresholdGrams: 50, costPerKg: 6.00, supplierId: generalSupplier.id, alertLevel: "OK" },
     });
-    const water = await db.ingredient.create({
-      data: { bakeryId: bakery.id, name: "Cold Water", category: IngredientCategory.LIQUID, unit: "ml", stockGrams: 99999, reorderThresholdGrams: 1000, criticalThresholdGrams: 500, costPerKg: 0, alertLevel: "OK" },
-    });
 
     // Recipes
     const brownieRecipe = await db.recipe.create({
@@ -161,7 +158,6 @@ export async function POST(req: NextRequest) {
           { ingredientId: wholeMilk.id, quantityGrams: 120, displayUnit: "g" },
           { ingredientId: casterSugar.id, quantityGrams: 50, displayUnit: "g" },
           { ingredientId: gelatinPowder.id, quantityGrams: 5, displayUnit: "g" },
-          { ingredientId: water.id, quantityGrams: 30, displayUnit: "g" },
           { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "g" },
           { ingredientId: mangoPuree.id, quantityGrams: 130, displayUnit: "g" },
           { ingredientId: limeJuice.id, quantityGrams: 5, displayUnit: "g" },
@@ -318,7 +314,6 @@ export async function POST(req: NextRequest) {
     await db.checklistDeduction.createMany({
       data: [
         { checklistItemId: pcStep1.id, ingredientId: gelatinPowder.id, deductionGrams: 24.5 },
-        { checklistItemId: pcStep1.id, ingredientId: water.id, deductionGrams: 147 },
       ],
     });
 
@@ -347,7 +342,6 @@ export async function POST(req: NextRequest) {
     await db.checklistDeduction.createMany({
       data: [
         { checklistItemId: pcStep5.id, ingredientId: gelatinPowder.id, deductionGrams: 10.5 },
-        { checklistItemId: pcStep5.id, ingredientId: water.id, deductionGrams: 63 },
       ],
     });
 
