@@ -122,13 +122,16 @@ export async function POST(req: NextRequest) {
     const limeJuice = await db.ingredient.create({
       data: { bakeryId: bakery.id, name: "Fresh Lime Juice", category: IngredientCategory.FRUIT, unit: "ml", stockGrams: 500, reorderThresholdGrams: 200, criticalThresholdGrams: 50, costPerKg: 6.00, supplierId: generalSupplier.id, alertLevel: "OK" },
     });
+    const water = await db.ingredient.create({
+      data: { bakeryId: bakery.id, name: "Cold Water", category: IngredientCategory.LIQUID, unit: "ml", stockGrams: 99999, reorderThresholdGrams: 1000, criticalThresholdGrams: 500, costPerKg: 0, alertLevel: "OK" },
+    });
 
     // Recipes
     const brownieRecipe = await db.recipe.create({
       data: {
         bakeryId: bakery.id, name: "Dark Chocolate Brownies", category: RecipeCategory.CAKE,
         description: "Rich, fudgy brownies made with 70% Belgian chocolate and a pinch of sea salt. Cut into 16 squares.",
-        yieldQuantity: 16, yieldUnit: "squares", batchSizeMultiplier: 1, wastageBufferPercent: 2, shelfLifeHours: 72, isActive: true,
+        yieldQuantity: 2, yieldUnit: "7x7 inch tins", batchSizeMultiplier: 1, wastageBufferPercent: 2, shelfLifeHours: 72, isActive: true,
         ingredients: { create: [
           { ingredientId: darkChocolate.id, quantityGrams: 300, displayUnit: "g" },
           { ingredientId: butter.id, quantityGrams: 250, displayUnit: "g" },
@@ -152,15 +155,16 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, name: "Mango & Apricot Panna Cotta", category: RecipeCategory.OTHER,
         description: "Silky vanilla cream panna cotta topped with a set mango & apricot fruit jelly layer. Served chilled.",
-        yieldQuantity: 2, yieldUnit: "servings", batchSizeMultiplier: 1, wastageBufferPercent: 3, shelfLifeHours: 48, isActive: true,
+        yieldQuantity: 4, yieldUnit: "servings", batchSizeMultiplier: 1, wastageBufferPercent: 3, shelfLifeHours: 48, isActive: true,
         ingredients: { create: [
-          { ingredientId: heavyCream.id, quantityGrams: 240, displayUnit: "ml" },
-          { ingredientId: wholeMilk.id, quantityGrams: 120, displayUnit: "ml" },
+          { ingredientId: heavyCream.id, quantityGrams: 240, displayUnit: "g" },
+          { ingredientId: wholeMilk.id, quantityGrams: 120, displayUnit: "g" },
           { ingredientId: casterSugar.id, quantityGrams: 50, displayUnit: "g" },
-          { ingredientId: gelatinPowder.id, quantityGrams: 4.5, displayUnit: "g" },
-          { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "ml" },
-          { ingredientId: mangoPuree.id, quantityGrams: 120, displayUnit: "ml" },
-          { ingredientId: limeJuice.id, quantityGrams: 5, displayUnit: "ml" },
+          { ingredientId: gelatinPowder.id, quantityGrams: 5, displayUnit: "g" },
+          { ingredientId: water.id, quantityGrams: 30, displayUnit: "g" },
+          { ingredientId: vanillaExtract.id, quantityGrams: 5, displayUnit: "g" },
+          { ingredientId: mangoPuree.id, quantityGrams: 130, displayUnit: "g" },
+          { ingredientId: limeJuice.id, quantityGrams: 5, displayUnit: "g" },
         ]},
         stages: { create: [
           { order: 1, type: RecipeStageType.MIX, name: "Bloom gelatin for base", durationMinutes: 10, requiresOven: false },
@@ -269,7 +273,7 @@ export async function POST(req: NextRequest) {
     });
 
     const pannaCottaBatch = await db.productionBatch.create({
-      data: { scheduleId: schedule.id, recipeId: pannaCottaRecipe.id, shiftType: ShiftType.MORNING, status: "SCHEDULED", quantity: 14, scaleFactor: 7, plannedStartTime: new Date(scheduleDate.getTime() + 5.5 * 60 * 60 * 1000), plannedEndTime: new Date(scheduleDate.getTime() + 12 * 60 * 60 * 1000), ovenSlots: 0, notes: "7x batch — 14 panna cottas (12 for café + 2 for Sophie)" },
+      data: { scheduleId: schedule.id, recipeId: pannaCottaRecipe.id, shiftType: ShiftType.MORNING, status: "SCHEDULED", quantity: 28, scaleFactor: 7, plannedStartTime: new Date(scheduleDate.getTime() + 5.5 * 60 * 60 * 1000), plannedEndTime: new Date(scheduleDate.getTime() + 12 * 60 * 60 * 1000), ovenSlots: 0, notes: "7x batch — 28 panna cottas (12 for café + 2 for Sophie + 14 buffer)" },
     });
 
     // Brownie checklist
@@ -309,14 +313,17 @@ export async function POST(req: NextRequest) {
 
     // Panna cotta checklist
     const pcStep1 = await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 1, description: "Bloom 21g Gelatin Powder in 105ml cold water — leave 5-10 min until soft", status: "PENDING" },
+      data: { batchId: pannaCottaBatch.id, order: 1, description: "Bloom 24.5g Gelatin Powder in 147g cold water — leave 5-10 min until soft", status: "PENDING" },
     });
     await db.checklistDeduction.createMany({
-      data: [{ checklistItemId: pcStep1.id, ingredientId: gelatinPowder.id, deductionGrams: 21 }],
+      data: [
+        { checklistItemId: pcStep1.id, ingredientId: gelatinPowder.id, deductionGrams: 24.5 },
+        { checklistItemId: pcStep1.id, ingredientId: water.id, deductionGrams: 147 },
+      ],
     });
 
     const pcStep2 = await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 2, description: "Heat 1680ml Heavy Cream, 840ml Whole Milk, and 350g Caster Sugar — stir until dissolved, don't boil", status: "PENDING" },
+      data: { batchId: pannaCottaBatch.id, order: 2, description: "Heat 1680g Heavy Cream, 840g Whole Milk, and 350g Caster Sugar — stir until dissolved, don't boil", status: "PENDING" },
     });
     await db.checklistDeduction.createMany({
       data: [
@@ -327,26 +334,29 @@ export async function POST(req: NextRequest) {
     });
 
     await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 3, description: "Stir bloomed gelatin into hot cream until smooth, add 35ml Vanilla Extract", status: "PENDING", ingredientId: vanillaExtract.id, deductionGrams: 35 },
+      data: { batchId: pannaCottaBatch.id, order: 3, description: "Stir bloomed gelatin into hot cream until smooth, add 35g Vanilla Extract", status: "PENDING", ingredientId: vanillaExtract.id, deductionGrams: 35 },
     });
 
     await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 4, description: "Strain into 14 serving glasses (2/3 full), refrigerate 4 hours. Cover with cling wrap if storing overnight without fruit layer.", status: "PENDING" },
+      data: { batchId: pannaCottaBatch.id, order: 4, description: "Strain into 28 serving glasses (2/3 full), refrigerate 4 hours. Cover with cling wrap if storing overnight without fruit layer.", status: "PENDING" },
     });
 
     const pcStep5 = await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 5, description: "Bloom 10.5g Gelatin Powder in 105ml cold water for fruit jelly layer", status: "PENDING" },
-    });
-    await db.checklistDeduction.createMany({
-      data: [{ checklistItemId: pcStep5.id, ingredientId: gelatinPowder.id, deductionGrams: 10.5 }],
-    });
-
-    const pcStep6 = await db.checklistItem.create({
-      data: { batchId: pannaCottaBatch.id, order: 6, description: "Warm 840ml Mango & Apricot Puree, melt gelatin into it, add 35ml Fresh Lime Juice", status: "PENDING" },
+      data: { batchId: pannaCottaBatch.id, order: 5, description: "Bloom 10.5g Gelatin Powder in 63g cold water for fruit jelly layer", status: "PENDING" },
     });
     await db.checklistDeduction.createMany({
       data: [
-        { checklistItemId: pcStep6.id, ingredientId: mangoPuree.id, deductionGrams: 840 },
+        { checklistItemId: pcStep5.id, ingredientId: gelatinPowder.id, deductionGrams: 10.5 },
+        { checklistItemId: pcStep5.id, ingredientId: water.id, deductionGrams: 63 },
+      ],
+    });
+
+    const pcStep6 = await db.checklistItem.create({
+      data: { batchId: pannaCottaBatch.id, order: 6, description: "Warm 910g Mango & Apricot Puree, melt gelatin into it, add 35g Fresh Lime Juice", status: "PENDING" },
+    });
+    await db.checklistDeduction.createMany({
+      data: [
+        { checklistItemId: pcStep6.id, ingredientId: mangoPuree.id, deductionGrams: 910 },
         { checklistItemId: pcStep6.id, ingredientId: limeJuice.id, deductionGrams: 35 },
       ],
     });
