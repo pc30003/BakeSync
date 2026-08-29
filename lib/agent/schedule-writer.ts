@@ -125,7 +125,7 @@ export async function writeSchedule(
           // Auto-match: if this step's description mentions an ingredient name,
           // attach a deduction for the full scaled recipe amount of that ingredient.
           const descLower = description.toLowerCase();
-          const stepDeductions: Array<{ ingredientId: string; grams: number }> = [];
+          const stepDeductions: Array<{ ingredientId: string; grams: number; name: string }> = [];
 
           for (const ri of recipeIngredients) {
             const remaining = remainingToDeduct.get(ri.ingredientId) ?? 0;
@@ -143,7 +143,7 @@ export async function writeSchedule(
               (coreName.length > 3 && descLower.includes(coreName));
 
             if (matched) {
-              stepDeductions.push({ ingredientId: ri.ingredientId, grams: remaining });
+              stepDeductions.push({ ingredientId: ri.ingredientId, grams: remaining, name: ri.name });
               remainingToDeduct.set(ri.ingredientId, 0); // mark as consumed
             }
           }
@@ -155,6 +155,20 @@ export async function writeSchedule(
                 ingredientId:    d.ingredientId,
                 deductionGrams:  d.grams,
               })),
+            });
+
+            // Rewrite the description so the quantities in the text match the actual deductions
+            const correctedText = stepDeductions
+              .map((d) => `${d.grams >= 1000 ? `${(d.grams / 1000).toFixed(2)}kg` : `${d.grams}g`} ${d.name}`)
+              .join(", ");
+
+            // Extract the action verb from the original (first word, e.g. "Melt", "Whisk", "Fold in")
+            const actionMatch = description.match(/^([A-Za-z ]+?)\s+\d/);
+            const action = actionMatch ? actionMatch[1].trim() : "Use";
+
+            await db.checklistItem.update({
+              where: { id: createdItem.id },
+              data:  { description: `${action} ${correctedText}` },
             });
           }
         }
