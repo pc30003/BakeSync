@@ -6,8 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatGrams(grams: number): string {
-  if (grams >= 1000) return `${(grams / 1000).toFixed(2)} kg`;
-  return `${grams.toFixed(0)} g`;
+  // Show grams with thousands separator so small deductions are visible
+  // e.g. 4997 → "4,997 g", 5000 → "5,000 g"
+  return `${Math.round(grams).toLocaleString("en-US")} g`;
 }
 
 export function formatCurrency(amount: number, currency = "USD"): string {
