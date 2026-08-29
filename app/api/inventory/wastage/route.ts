@@ -8,7 +8,7 @@ const WastageSchema = z.object({
   ingredientId: z.string().nullable().optional(),
   productId: z.string().nullable().optional(),
   productName: z.string().nullable().optional(),
-  quantityGrams: z.number().positive().max(100000, "Maximum 100kg per entry"),
+  quantityGrams: z.number().int("Must be a whole number of grams").min(1, "Minimum 1 gram").max(100000, "Maximum 100kg per entry"),
   reason: z.string().min(1),
   shiftDate: z.string().datetime(),
 });

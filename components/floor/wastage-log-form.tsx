@@ -50,13 +50,20 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
     e.preventDefault();
     if (!form.quantityGrams || !form.reason || !form.shiftDate) return;
 
+    // Round to whole grams and enforce minimum of 1
+    const grams = Math.round(parseFloat(form.quantityGrams));
+    if (isNaN(grams) || grams < 1) {
+      setError("Quantity must be at least 1 gram (whole numbers only).");
+      return;
+    }
+
     startTransition(async () => {
       const res = await fetch("/api/inventory/wastage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ingredientId:  form.ingredientId || null,
-          quantityGrams: parseFloat(form.quantityGrams),
+          quantityGrams: grams,
           reason:        form.reason,
           shiftDate:     new Date(form.shiftDate).toISOString(),
         }),
@@ -124,7 +131,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
                 id="quantityGrams"
                 name="quantityGrams"
                 type="number"
-                min="0"
+                min="1"
                 max={maxGrams}
                 step="1"
                 required
