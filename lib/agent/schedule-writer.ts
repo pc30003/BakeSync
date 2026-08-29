@@ -100,77 +100,78 @@ export async function writeSchedule(
       const recipeIngredients = recipeData?.ingredients ?? [];
       const scale = Number(batch.scaleFactor) || 1;
 
-      // Track how much of each ingredient has already been deducted across steps,
-      // so we never deduct more than the recipe total (scaled).
-      const remainingToDeduct = new Map<string, number>();
-      for (const ri of recipeIngredients) {
-        remainingToDeduct.set(ri.ingredientId, ri.quantityGrams * scale);
+      const steps = batch.checklistSteps ?? [];
+      const stepDescriptions = steps.map((s) => typeof s === "string" ? s : s.description);
+
+      // Helper: does a step description mention this ingredient?
+      function stepMentions(desc: string, ri: { name: string }): boolean {
+        const descLower  = desc.toLowerCase();
+        const nameLower  = ri.name.toLowerCase();
+        const simpleName = nameLower.split(" (")[0].trim();
+        const coreName   = simpleName.replace(/\s*\d+%.*/, "").trim();
+        return descLower.includes(nameLower)
+          || descLower.includes(simpleName)
+          || (coreName.length > 3 && descLower.includes(coreName));
       }
 
-      // Create checklist items from the AI-generated steps, with auto-matched deductions
-      if (batch.checklistSteps.length > 0) {
-        for (let idx = 0; idx < batch.checklistSteps.length; idx++) {
-          const step = batch.checklistSteps[idx];
-          const description = typeof step === "string" ? step : step.description;
+      // PASS 1: for each ingredient, find which step indexes mention it,
+      // then split the scaled total evenly across those steps.
+      // Map of stepIndex → array of { ingredientId, grams, name }
+      const stepDeductionMap = new Map<number, Array<{ ingredientId: string; grams: number; name: string }>>();
 
-          const createdItem = await db.checklistItem.create({
-            data: {
-              batchId:     createdBatch.id,
-              order:       idx + 1,
-              description: description,
-              status:      "PENDING",
-            },
+      for (const ri of recipeIngredients) {
+        const totalGrams = ri.quantityGrams * scale;
+        const matchingSteps = stepDescriptions
+          .map((desc, i) => ({ desc, i }))
+          .filter(({ desc }) => stepMentions(desc, ri))
+          .map(({ i }) => i);
+
+        if (matchingSteps.length === 0) continue;
+
+        const perStep = totalGrams / matchingSteps.length;
+        for (const stepIdx of matchingSteps) {
+          const arr = stepDeductionMap.get(stepIdx) ?? [];
+          arr.push({ ingredientId: ri.ingredientId, grams: Math.round(perStep * 10) / 10, name: ri.name });
+          stepDeductionMap.set(stepIdx, arr);
+        }
+      }
+
+      // PASS 2: create checklist items + their deductions
+      for (let idx = 0; idx < stepDescriptions.length; idx++) {
+        const description = stepDescriptions[idx];
+
+        const createdItem = await db.checklistItem.create({
+          data: {
+            batchId:     createdBatch.id,
+            order:       idx + 1,
+            description: description,
+            status:      "PENDING",
+          },
+        });
+
+        const stepDeductions = stepDeductionMap.get(idx) ?? [];
+
+        if (stepDeductions.length > 0) {
+          await db.checklistDeduction.createMany({
+            data: stepDeductions.map((d) => ({
+              checklistItemId: createdItem.id,
+              ingredientId:    d.ingredientId,
+              deductionGrams:  d.grams,
+            })),
           });
 
-          // Auto-match: if this step's description mentions an ingredient name,
-          // attach a deduction for the full scaled recipe amount of that ingredient.
-          const descLower = description.toLowerCase();
-          const stepDeductions: Array<{ ingredientId: string; grams: number; name: string }> = [];
+          // Rewrite the description so the quantities match the actual deductions
+          const correctedText = stepDeductions
+            .map((d) => `${d.grams >= 1000 ? `${(d.grams / 1000).toFixed(2)}kg` : `${d.grams}g`} ${d.name}`)
+            .join(", ");
 
-          for (const ri of recipeIngredients) {
-            const remaining = remainingToDeduct.get(ri.ingredientId) ?? 0;
-            if (remaining <= 0) continue;
+          const actionMatch = description.match(/^([A-Za-z ]+?)\s+\d/);
+          const action = actionMatch ? actionMatch[1].trim() : "Use";
 
-            // Match on the ingredient name (or simplified versions)
-            const nameLower = ri.name.toLowerCase();
-            const simpleName = nameLower.split(" (")[0].trim(); // "dark chocolate 70% (callebaut)" → "dark chocolate 70%"
-            // Also strip percentages/descriptors: "fine sea salt" stays, "unsalted butter 82% fat" → "unsalted butter"
-            const coreName = simpleName.replace(/\s*\d+%.*/, "").trim();
-
-            const matched =
-              descLower.includes(nameLower) ||
-              descLower.includes(simpleName) ||
-              (coreName.length > 3 && descLower.includes(coreName));
-
-            if (matched) {
-              stepDeductions.push({ ingredientId: ri.ingredientId, grams: remaining, name: ri.name });
-              remainingToDeduct.set(ri.ingredientId, 0); // mark as consumed
-            }
-          }
-
-          if (stepDeductions.length > 0) {
-            await db.checklistDeduction.createMany({
-              data: stepDeductions.map((d) => ({
-                checklistItemId: createdItem.id,
-                ingredientId:    d.ingredientId,
-                deductionGrams:  d.grams,
-              })),
-            });
-
-            // Rewrite the description so the quantities in the text match the actual deductions
-            const correctedText = stepDeductions
-              .map((d) => `${d.grams >= 1000 ? `${(d.grams / 1000).toFixed(2)}kg` : `${d.grams}g`} ${d.name}`)
-              .join(", ");
-
-            // Extract the action verb from the original (first word, e.g. "Melt", "Whisk", "Fold in")
-            const actionMatch = description.match(/^([A-Za-z ]+?)\s+\d/);
-            const action = actionMatch ? actionMatch[1].trim() : "Use";
-
-            await db.checklistItem.update({
-              where: { id: createdItem.id },
-              data:  { description: `${action} ${correctedText}` },
-            });
-          }
+          await db.checklistItem.update({
+            where: { id: createdItem.id },
+            data:  { description: `${action} ${correctedText}` },
+          });
         }
       }
 
