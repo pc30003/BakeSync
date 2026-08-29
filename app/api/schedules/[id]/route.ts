@@ -127,6 +127,11 @@ export async function PATCH(
 
     // ── Revoke ─────────────────────────────────────────────────────────────
     } else {
+      // Guard: if already not approved, nothing to revoke (prevents double-restore)
+      if (!existing.isApproved) {
+        return error("Schedule is not approved.", 409);
+      }
+
       // Find all DONE checklist items that deducted stock, so we can restore it
       const doneItems = await db.checklistItem.findMany({
         where: {

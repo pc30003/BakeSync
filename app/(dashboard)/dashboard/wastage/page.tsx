@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatGrams } from "@/lib/utils";
 import { WastageLogForm } from "@/components/floor/wastage-log-form";
+import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import { subDays, startOfDay } from "date-fns";
 
 export const metadata: Metadata = { title: "Log Wastage" };
@@ -32,6 +33,15 @@ export default async function WastagePage() {
     }),
   ]);
 
+  // Build CSV export data from recent logs
+  const csvRows = recentLogs.map((log) => [
+    log.ingredient?.name ?? log.productName ?? "Unknown",
+    Number(log.quantityGrams),
+    log.reason,
+    formatDate(log.shiftDate),
+    log.loggedBy.name ?? "",
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -53,7 +63,15 @@ export default async function WastagePage() {
         {/* Recent logs */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Logs (7 days)</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Recent Logs (7 days)</CardTitle>
+              <ExportCsvButton
+                filename="wastage-log"
+                headers={["Item", "Grams", "Reason", "Date", "Logged By"]}
+                rows={csvRows}
+                label="Export"
+              />
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {recentLogs.length === 0 ? (

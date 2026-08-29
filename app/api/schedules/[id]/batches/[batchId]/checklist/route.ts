@@ -26,11 +26,16 @@ export async function PATCH(
     const item = await db.checklistItem.findFirst({
       where: { id: parsed.data.itemId, batchId: params.batchId },
       include: {
-        batch: { include: { schedule: { select: { isApproved: true } } } },
+        batch: { include: { schedule: { select: { isApproved: true, bakeryId: true } } } },
         deductions: true,
       },
     });
     if (!item) return notFound("Checklist item");
+
+    // Multi-tenancy: ensure this checklist item belongs to the user's bakery
+    if (item.batch.schedule.bakeryId !== session!.user.bakeryId) {
+      return error("Forbidden", 403);
+    }
 
     // Don't allow ticking items on unapproved schedules
     if (!item.batch.schedule.isApproved) {

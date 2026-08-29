@@ -143,11 +143,29 @@ export async function writeSchedule(
       // Cap the sum at the scaled recipe total so it can never over-deduct.
       const stepDeductionMap = new Map<number, Array<{ ingredientId: string; grams: number; name: string }>>();
 
-      for (const ri of recipeIngredients) {
+      // Sort ingredients by name length DESCENDING so longer, more specific names
+      // match first (e.g. "Caster Sugar" before "Sugar"). We track which text spans
+      // each step has already claimed so a shorter name can't double-match.
+      const claimedSpans = new Map<number, string[]>(); // stepIdx → list of matched substrings
+      const sortedIngredients = [...recipeIngredients].sort((a, b) => b.name.length - a.name.length);
+
+      for (const ri of sortedIngredients) {
         const totalGrams = ri.quantityGrams * scale;
         const matchingSteps = stepDescriptions
           .map((desc, i) => ({ desc, i }))
-          .filter(({ desc }) => stepMentions(desc, ri))
+          .filter(({ desc, i }) => {
+            if (!stepMentions(desc, ri)) return false;
+            // Skip if a longer ingredient name already claimed this ingredient's text
+            // in this step (prevents "Sugar" matching inside "Caster Sugar")
+            const claimed = claimedSpans.get(i) ?? [];
+            const nameLower = ri.name.toLowerCase().split(" (")[0].trim();
+            const alreadyClaimed = claimed.some((c) => c.includes(nameLower));
+            if (alreadyClaimed) return false;
+            // Record this claim
+            claimed.push(nameLower);
+            claimedSpans.set(i, claimed);
+            return true;
+          })
           .map(({ i }) => i);
 
         if (matchingSteps.length === 0) continue;

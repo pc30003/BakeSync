@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ok, notFound, serverError, requireAuth } from "@/lib/api-helpers";
+import { ok, notFound, serverError, requireAuth, error } from "@/lib/api-helpers";
 import { computeAlertLevel } from "@/lib/stock-actions";
 
 // POST /api/procurement/[id]/approve — one-click approval + auto-restock
@@ -14,6 +14,11 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
       include: { ingredient: true },
     });
     if (!existing) return notFound("Procurement recommendation");
+
+    // Idempotency: if already approved, don't restock again
+    if (existing.approvedAt) {
+      return error("This recommendation has already been approved.", 409);
+    }
 
     // Approve the recommendation
     const updated = await db.procurementRecommendation.update({

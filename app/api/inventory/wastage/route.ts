@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Deduct stock if ingredient selected
+      // Deduct stock if ingredient selected (must belong to this bakery)
       if (parsed.data.ingredientId) {
-        const ingredient = await tx.ingredient.findUnique({
-          where: { id: parsed.data.ingredientId },
+        const ingredient = await tx.ingredient.findFirst({
+          where: { id: parsed.data.ingredientId, bakeryId: session!.user.bakeryId },
         });
 
         if (ingredient) {

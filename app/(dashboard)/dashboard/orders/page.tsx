@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { ExportCsvButton } from "@/components/ui/export-csv-button";
 import type { OrderStatus, OrderChannel } from "@/types";
 
 export const metadata: Metadata = { title: "Orders" };
@@ -38,11 +39,29 @@ export default async function OrdersPage() {
     take: 50,
   });
 
+  // Build CSV export data
+  const csvRows = orders.map((o) => [
+    o.customerName ?? "",
+    o.customerEmail ?? "",
+    channelLabel[o.channel as OrderChannel] ?? o.channel,
+    o.status,
+    formatDate(o.fulfilmentDate),
+    Number(o.totalValue),
+    o.lineItems.map((li) => `${li.quantity}x ${li.productName}`).join("; "),
+  ]);
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Orders"
         description={`${orders.length} orders found`}
+        actions={
+          <ExportCsvButton
+            filename="orders"
+            headers={["Customer", "Email", "Channel", "Status", "Fulfilment Date", "Value", "Items"]}
+            rows={csvRows}
+          />
+        }
       />
 
       <Card>
