@@ -36,7 +36,7 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <AutoRefresh interval={3000} />
+      <AutoRefresh interval={2000} />
       <PageHeader
         title="Stock Levels"
         description={`${ingredients.length} tracked ingredients`}

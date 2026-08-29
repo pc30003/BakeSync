@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckSquare, Square, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatGrams } from "@/lib/utils";
 
 interface DeductionData {
   ingredientId: string;
@@ -158,12 +158,12 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
                   {item.deductions && item.deductions.length > 0 ? (
                     item.deductions.map((d, i) => (
                       <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                        📦 {d.ingredient.name} −{d.deductionGrams >= 1000 ? `${(d.deductionGrams / 1000).toFixed(1)}kg` : `${d.deductionGrams}g`}
+                        📦 {d.ingredient.name} −{formatGrams(d.deductionGrams)}
                       </span>
                     ))
                   ) : item.ingredient && item.deductionGrams ? (
                     <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                      📦 {item.ingredient.name} −{item.deductionGrams >= 1000 ? `${(item.deductionGrams / 1000).toFixed(1)}kg` : `${item.deductionGrams}g`}
+                      📦 {item.ingredient.name} −{formatGrams(item.deductionGrams)}
                     </span>
                   ) : null}
                 </div>

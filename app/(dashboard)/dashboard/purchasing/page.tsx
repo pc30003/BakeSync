@@ -53,7 +53,7 @@ export default async function PurchasingDashboard() {
 
   return (
     <div className="space-y-6">
-      <AutoRefresh interval={3000} />
+      <AutoRefresh interval={2000} />
       <PageHeader
         title="Procurement"
         description={`${formatDate(now)} — review and approve purchasing recommendations`}

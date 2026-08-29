@@ -5,7 +5,7 @@ import { AgentActivityFeed } from "@/components/agent/agent-activity-feed";
 import { StatCard } from "@/components/ui/stat-card";
 import { formatDate } from "@/lib/utils";
 import {
-  Bot, AlertTriangle, Zap, CheckCircle2, Clock,
+  Bot, AlertTriangle, Zap,
 } from "lucide-react";
 import { subDays } from "date-fns";
 

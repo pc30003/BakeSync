@@ -72,7 +72,7 @@ export default async function HeadBakerDashboard() {
 
   return (
     <div className="space-y-6">
-      <AutoRefresh interval={3000} />
+      <AutoRefresh interval={2000} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — here's today's kitchen overview`}

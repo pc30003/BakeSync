@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { formatGrams } from "@/lib/utils";
 
 interface Ingredient {
   id: string;
@@ -142,7 +143,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
               />
               {selected && (
                 <p className="text-xs text-muted-foreground">
-                  Max: {selected.stockGrams >= 1000 ? `${(selected.stockGrams / 1000).toFixed(1)} kg` : `${selected.stockGrams}g`} in stock
+                  Max: {formatGrams(selected.stockGrams)} in stock
                 </p>
               )}
             </>
