@@ -127,6 +127,45 @@ export async function PATCH(
 
     // ── Revoke ─────────────────────────────────────────────────────────────
     } else {
+      // Find all DONE checklist items that deducted stock, so we can restore it
+      const doneItems = await db.checklistItem.findMany({
+        where: {
+          batch: { scheduleId: params.id },
+          status: "DONE",
+        },
+        include: { deductions: true },
+      });
+
+      // Restore stock for every ingredient that was deducted
+      for (const item of doneItems) {
+        const restorations: Array<{ ingredientId: string; grams: number }> = [];
+        if (item.deductions && item.deductions.length > 0) {
+          for (const d of item.deductions) {
+            restorations.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
+          }
+        } else if (item.ingredientId && item.deductionGrams) {
+          restorations.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
+        }
+
+        for (const r of restorations) {
+          const ingredient = await db.ingredient.findUnique({ where: { id: r.ingredientId } });
+          if (ingredient) {
+            const newStock = Number(ingredient.stockGrams) + r.grams;
+            const critical = Number(ingredient.criticalThresholdGrams);
+            const reorder  = Number(ingredient.reorderThresholdGrams);
+            const alertLevel =
+              newStock <= 0        ? "OUT_OF_STOCK" :
+              newStock <= critical ? "CRITICAL"     :
+              newStock <= reorder  ? "LOW"          :
+              "OK";
+            await db.ingredient.update({
+              where: { id: r.ingredientId },
+              data:  { stockGrams: newStock, alertLevel },
+            });
+          }
+        }
+      }
+
       // Reset all checklist items back to PENDING
       await db.checklistItem.updateMany({
         where: {
@@ -157,7 +196,7 @@ export async function PATCH(
 
       return ok({
         schedule: revoked,
-        message:  "Schedule revoked. All checklist progress has been reset.",
+        message:  "Schedule revoked. Checklist progress reset and deducted ingredients restored.",
       });
     }
 

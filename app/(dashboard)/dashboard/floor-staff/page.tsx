@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
 import { startOfDay, endOfDay } from "date-fns";
 import { FloorShiftChecklist } from "@/components/floor/shift-checklist";
-import { AutoRefresh } from "@/components/ui/auto-refresh";
+import { ScheduleWatcher } from "@/components/floor/schedule-watcher";
 
 export const metadata: Metadata = { title: "My Shift" };
 
@@ -46,8 +46,11 @@ export default async function FloorStaffDashboard() {
     greetingHour < 17 ? "Good afternoon" :
     "Good evening";
 
+  const hasSchedule = !!todaySchedule && todaySchedule.batches.length > 0;
+
   return (
     <div className="space-y-6">
+      <ScheduleWatcher hasSchedule={hasSchedule} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — your shift overview`}
