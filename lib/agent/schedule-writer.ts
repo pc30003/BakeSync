@@ -95,17 +95,23 @@ export async function writeSchedule(
         },
       });
 
-      // Build a set of valid ingredient IDs for this bakery (to validate AI output)
-      const validIngredientIds = new Set(context.stockLevels.map((s) => s.ingredientId));
+      // Get the recipe's ingredients so we can auto-attach deductions by name-matching
+      const recipeData = context.recipes.find((r) => r.recipeId === resolvedRecipeId);
+      const recipeIngredients = recipeData?.ingredients ?? [];
+      const scale = Number(batch.scaleFactor) || 1;
 
-      // Create checklist items from the AI-generated steps, with deductions
+      // Track how much of each ingredient has already been deducted across steps,
+      // so we never deduct more than the recipe total (scaled).
+      const remainingToDeduct = new Map<string, number>();
+      for (const ri of recipeIngredients) {
+        remainingToDeduct.set(ri.ingredientId, ri.quantityGrams * scale);
+      }
+
+      // Create checklist items from the AI-generated steps, with auto-matched deductions
       if (batch.checklistSteps.length > 0) {
         for (let idx = 0; idx < batch.checklistSteps.length; idx++) {
           const step = batch.checklistSteps[idx];
-
-          // Handle both old (string) and new (object) formats safely
           const description = typeof step === "string" ? step : step.description;
-          const deductions  = typeof step === "string" ? [] : (step.deductions ?? []);
 
           const createdItem = await db.checklistItem.create({
             data: {
@@ -116,14 +122,28 @@ export async function writeSchedule(
             },
           });
 
-          // Create deduction entries — only for valid ingredients with positive grams
-          const validDeductions = deductions.filter(
-            (d) => d.ingredientId && validIngredientIds.has(d.ingredientId) && d.grams > 0
-          );
+          // Auto-match: if this step's description mentions an ingredient name,
+          // attach a deduction for the full scaled recipe amount of that ingredient.
+          const descLower = description.toLowerCase();
+          const stepDeductions: Array<{ ingredientId: string; grams: number }> = [];
 
-          if (validDeductions.length > 0) {
+          for (const ri of recipeIngredients) {
+            const remaining = remainingToDeduct.get(ri.ingredientId) ?? 0;
+            if (remaining <= 0) continue;
+
+            // Match on the ingredient name (or a simplified version of it)
+            const nameLower = ri.name.toLowerCase();
+            const simpleName = nameLower.split(" (")[0]; // "dark chocolate 70% (callebaut)" → "dark chocolate 70%"
+
+            if (descLower.includes(nameLower) || descLower.includes(simpleName)) {
+              stepDeductions.push({ ingredientId: ri.ingredientId, grams: remaining });
+              remainingToDeduct.set(ri.ingredientId, 0); // mark as consumed
+            }
+          }
+
+          if (stepDeductions.length > 0) {
             await db.checklistDeduction.createMany({
-              data: validDeductions.map((d) => ({
+              data: stepDeductions.map((d) => ({
                 checklistItemId: createdItem.id,
                 ingredientId:    d.ingredientId,
                 deductionGrams:  d.grams,
