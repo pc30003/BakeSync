@@ -104,7 +104,10 @@ export interface AgentPlannedBatch {
   plannedStartTime: string;     // ISO datetime
   plannedEndTime: string;       // ISO datetime
   ovenSlots: number;
-  checklistSteps: string[];     // ordered list of step descriptions
+  checklistSteps: Array<{
+    description: string;
+    deductions: Array<{ ingredientId: string; grams: number }>;
+  }>;
   ingredientRequirements: Array<{
     ingredientId: string;
     name: string;

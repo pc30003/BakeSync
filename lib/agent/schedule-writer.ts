@@ -95,16 +95,42 @@ export async function writeSchedule(
         },
       });
 
-      // Create checklist items from the AI-generated steps
+      // Build a set of valid ingredient IDs for this bakery (to validate AI output)
+      const validIngredientIds = new Set(context.stockLevels.map((s) => s.ingredientId));
+
+      // Create checklist items from the AI-generated steps, with deductions
       if (batch.checklistSteps.length > 0) {
-        await db.checklistItem.createMany({
-          data: batch.checklistSteps.map((step, idx) => ({
-            batchId:     createdBatch.id,
-            order:       idx + 1,
-            description: step,
-            status:      "PENDING" as const,
-          })),
-        });
+        for (let idx = 0; idx < batch.checklistSteps.length; idx++) {
+          const step = batch.checklistSteps[idx];
+
+          // Handle both old (string) and new (object) formats safely
+          const description = typeof step === "string" ? step : step.description;
+          const deductions  = typeof step === "string" ? [] : (step.deductions ?? []);
+
+          const createdItem = await db.checklistItem.create({
+            data: {
+              batchId:     createdBatch.id,
+              order:       idx + 1,
+              description: description,
+              status:      "PENDING",
+            },
+          });
+
+          // Create deduction entries — only for valid ingredients with positive grams
+          const validDeductions = deductions.filter(
+            (d) => d.ingredientId && validIngredientIds.has(d.ingredientId) && d.grams > 0
+          );
+
+          if (validDeductions.length > 0) {
+            await db.checklistDeduction.createMany({
+              data: validDeductions.map((d) => ({
+                checklistItemId: createdItem.id,
+                ingredientId:    d.ingredientId,
+                deductionGrams:  d.grams,
+              })),
+            });
+          }
+        }
       }
 
       // ── 3. Collect shortfalls ──────────────────────────────────────────────

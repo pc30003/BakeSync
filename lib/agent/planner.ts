@@ -81,8 +81,29 @@ const CREATE_SCHEDULE_FUNCTION: OpenAI.Chat.ChatCompletionTool = {
               ovenSlots:        { type: "number", description: "Number of oven slots required simultaneously" },
               checklistSteps: {
                 type: "array",
-                items: { type: "string" },
-                description: "Ordered step-by-step instructions for kitchen staff",
+                description: "Ordered step-by-step instructions for kitchen staff. For steps that use ingredients, include the deductions array listing exactly which ingredients and how many grams to deduct (scaled for the full batch quantity).",
+                items: {
+                  type: "object",
+                  required: ["description", "deductions"],
+                  properties: {
+                    description: {
+                      type: "string",
+                      description: "The instruction text. Include full ingredient names and exact quantities, e.g. 'Weigh 900g Dark Chocolate 70% and 750g Unsalted Butter'",
+                    },
+                    deductions: {
+                      type: "array",
+                      description: "Ingredients this step consumes (empty array for non-ingredient steps like 'Bake' or 'Cool'). Quantities must be scaled for the full batch.",
+                      items: {
+                        type: "object",
+                        required: ["ingredientId", "grams"],
+                        properties: {
+                          ingredientId: { type: "string", description: "The exact ingredientId from the recipe data" },
+                          grams:        { type: "number", description: "Grams to deduct for the full batch (recipe amount × scaleFactor)" },
+                        },
+                      },
+                    },
+                  },
+                },
               },
               ingredientRequirements: {
                 type: "array",
