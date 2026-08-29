@@ -82,3 +82,10 @@
     @apply min-h-[44px] min-w-[44px];
   }
 }
+
+/* Smooth colour transitions when switching light/dark theme */
+@layer base {
+  body {
+    transition: background-color 0.25s ease, color 0.25s ease;
+  }
+}

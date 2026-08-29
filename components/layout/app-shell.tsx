@@ -13,11 +13,13 @@ import type { SessionUser } from "@/types";
 const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 
 interface AppShellProps {
-  user:     SessionUser;
-  children: React.ReactNode;
+  user:        SessionUser;
+  children:    React.ReactNode;
+  openingTime?: string;
+  closingTime?: string;
 }
 
-export function AppShell({ user, children }: AppShellProps) {
+export function AppShell({ user, children, openingTime = "05:00", closingTime = "20:00" }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -45,7 +47,7 @@ export function AppShell({ user, children }: AppShellProps) {
 
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
-          <TopBar user={user} onMenuClick={() => setSidebarOpen(true)} />
+          <TopBar user={user} onMenuClick={() => setSidebarOpen(true)} openingTime={openingTime} closingTime={closingTime} />
           <main className="flex-1 p-4 md:p-6 lg:p-8 animate-fade-in">
             {children}
           </main>

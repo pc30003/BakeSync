@@ -7,11 +7,15 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ShiftClock } from "./shift-clock";
 import type { SessionUser } from "@/types";
 
 interface TopBarProps {
   user: SessionUser;
   onMenuClick: () => void;
+  openingTime?: string;
+  closingTime?: string;
 }
 
 interface AlertData {
@@ -23,7 +27,7 @@ interface AlertData {
   createdAt: string;
 }
 
-export function TopBar({ user, onMenuClick }: TopBarProps) {
+export function TopBar({ user, onMenuClick, openingTime = "05:00", closingTime = "20:00" }: TopBarProps) {
   const [panelOpen, setPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -70,11 +74,16 @@ export function TopBar({ user, onMenuClick }: TopBarProps) {
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Spacer on desktop */}
-      <div className="hidden lg:block" />
+      {/* Live shift clock (desktop) */}
+      <div className="hidden lg:block">
+        <ShiftClock openingTime={openingTime} closingTime={closingTime} />
+      </div>
 
-      {/* Right: alerts + user */}
+      {/* Right: theme + alerts + user */}
       <div className="flex items-center gap-2">
+        {/* Theme toggle */}
+        <ThemeToggle />
+
         {/* Alert bell with dropdown */}
         <div className="relative" ref={panelRef}>
           <button

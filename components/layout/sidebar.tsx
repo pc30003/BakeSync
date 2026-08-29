@@ -99,11 +99,11 @@ function SidebarContent({
     <div className="flex flex-col h-full">
 
       {/* ── Logo header ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#FFFBEB]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#FFFBEB] dark:bg-card">
         <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5 min-w-0">
           <BakeSyncLogo variant="icon" size="sm" className="rounded-lg shrink-0" />
           <div className="min-w-0">
-            <p className="font-bold text-[#4A2010] text-sm leading-tight">BakeSync</p>
+            <p className="font-bold text-[#4A2010] dark:text-amber-100 text-sm leading-tight">BakeSync</p>
             <p className="text-[10px] text-[#D97706] font-medium leading-tight truncate">
               {getRoleLabel(user.role)}
             </p>
@@ -175,11 +175,11 @@ function SidebarContent({
       </nav>
 
       {/* ── User footer ────────────────────────────────────────────────── */}
-      <div className="border-t border-border px-4 py-3 bg-[#FFFBEB]">
+      <div className="border-t border-border px-4 py-3 bg-[#FFFBEB] dark:bg-card">
         <div className="flex items-center gap-3 min-w-0">
           <UserAvatar user={user} size="sm" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[#4A2010] truncate">
+            <p className="text-sm font-semibold text-[#4A2010] dark:text-amber-100 truncate">
               {user.name ?? "Team Member"}
             </p>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
