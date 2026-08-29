@@ -9,34 +9,34 @@ interface ScheduleWatcherProps {
 }
 
 /**
- * Only refreshes the page when the floor staff is WAITING for a schedule
- * (no approved schedule shown yet). Once a schedule appears, it stops
- * refreshing so it never interferes with checklist tick state.
+ * Watches for schedule approval/revocation changes and refreshes the page
+ * ONLY when the approved-schedule state actually flips. It never refreshes
+ * on every poll, so it won't interfere with checklist ticking mid-work.
  */
 export function ScheduleWatcher({ hasSchedule }: ScheduleWatcherProps) {
   const router = useRouter();
-  const lastState = useRef(hasSchedule);
+  const lastKnown = useRef(hasSchedule);
 
   useEffect(() => {
-    // If a schedule is already showing, do nothing — protect the checklist state
-    if (hasSchedule) return;
-
-    // No schedule yet — poll for one every 2 seconds
     const id = setInterval(async () => {
       try {
         const res = await fetch("/api/schedules?approved=true");
         if (!res.ok) return;
         const json = await res.json();
+
+        const now = new Date();
         const approvedToday = (json.data ?? []).some((s: any) => {
           const d = new Date(s.scheduleDate);
-          const now = new Date();
           return d.getUTCFullYear() === now.getUTCFullYear()
             && d.getUTCMonth() === now.getUTCMonth()
             && d.getUTCDate() === now.getUTCDate();
         });
 
-        // A schedule just got approved — refresh once to load it
-        if (approvedToday && !lastState.current) {
+        // Only refresh when the state ACTUALLY changes:
+        //   - no schedule → approved (schedule appears)
+        //   - approved → revoked (schedule disappears)
+        if (approvedToday !== lastKnown.current) {
+          lastKnown.current = approvedToday;
           router.refresh();
         }
       } catch {
@@ -45,8 +45,7 @@ export function ScheduleWatcher({ hasSchedule }: ScheduleWatcherProps) {
     }, 2000);
 
     return () => clearInterval(id);
-  }, [hasSchedule, router]);
-  // Polls every 2s while waiting for a schedule
+  }, [router]);
 
   return null;
 }
