@@ -114,9 +114,33 @@ export async function writeSchedule(
           || (coreName.length > 3 && descLower.includes(coreName));
       }
 
-      // PASS 1: for each ingredient, find which step indexes mention it,
-      // then split the scaled total evenly across those steps.
-      // Map of stepIndex → array of { ingredientId, grams, name }
+      // Helper: extract the gram amount the AI wrote right before an ingredient
+      // mention in the description. e.g. "Bloom 14g Gelatin Powder" → 14
+      function extractGramsNear(desc: string, ri: { name: string }): number | null {
+        const simpleName = ri.name.toLowerCase().split(" (")[0].trim();
+        const coreName   = simpleName.replace(/\s*\d+%.*/, "").trim();
+        // Look for a number+unit immediately before the ingredient name
+        const patterns = [ri.name.toLowerCase(), simpleName, coreName];
+        const lower = desc.toLowerCase();
+        for (const p of patterns) {
+          if (p.length < 3) continue;
+          const idx = lower.indexOf(p);
+          if (idx === -1) continue;
+          // Grab the ~15 chars before the name and find a number
+          const before = lower.slice(Math.max(0, idx - 15), idx);
+          const m = before.match(/(\d+(?:\.\d+)?)\s*(kg|g)?\s*$/);
+          if (m) {
+            let val = parseFloat(m[1]);
+            if (m[2] === "kg") val *= 1000;
+            return val;
+          }
+        }
+        return null;
+      }
+
+      // PASS 1: for each ingredient, find which steps mention it.
+      // Use the AI's stated per-step amount if available; otherwise split evenly.
+      // Cap the sum at the scaled recipe total so it can never over-deduct.
       const stepDeductionMap = new Map<number, Array<{ ingredientId: string; grams: number; name: string }>>();
 
       for (const ri of recipeIngredients) {
@@ -128,12 +152,25 @@ export async function writeSchedule(
 
         if (matchingSteps.length === 0) continue;
 
-        const perStep = totalGrams / matchingSteps.length;
-        for (const stepIdx of matchingSteps) {
-          const arr = stepDeductionMap.get(stepIdx) ?? [];
-          arr.push({ ingredientId: ri.ingredientId, grams: Math.round(perStep * 10) / 10, name: ri.name });
-          stepDeductionMap.set(stepIdx, arr);
+        // Try to read the AI's stated amount for each matching step
+        const stated = matchingSteps.map((i) => extractGramsNear(stepDescriptions[i], ri));
+        const allHaveStated = stated.every((s) => s !== null && s > 0);
+
+        let perStepAmounts: number[];
+        if (allHaveStated) {
+          // Use AI amounts, but scale them so the total exactly equals the recipe total
+          const statedSum = stated.reduce((a, b) => a + (b ?? 0), 0);
+          perStepAmounts = stated.map((s) => (s! / statedSum) * totalGrams);
+        } else {
+          // Fall back to even split
+          perStepAmounts = matchingSteps.map(() => totalGrams / matchingSteps.length);
         }
+
+        matchingSteps.forEach((stepIdx, k) => {
+          const arr = stepDeductionMap.get(stepIdx) ?? [];
+          arr.push({ ingredientId: ri.ingredientId, grams: Math.round(perStepAmounts[k] * 10) / 10, name: ri.name });
+          stepDeductionMap.set(stepIdx, arr);
+        });
       }
 
       // PASS 2: create checklist items + their deductions
