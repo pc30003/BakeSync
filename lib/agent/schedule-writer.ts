@@ -131,11 +131,18 @@ export async function writeSchedule(
             const remaining = remainingToDeduct.get(ri.ingredientId) ?? 0;
             if (remaining <= 0) continue;
 
-            // Match on the ingredient name (or a simplified version of it)
+            // Match on the ingredient name (or simplified versions)
             const nameLower = ri.name.toLowerCase();
-            const simpleName = nameLower.split(" (")[0]; // "dark chocolate 70% (callebaut)" → "dark chocolate 70%"
+            const simpleName = nameLower.split(" (")[0].trim(); // "dark chocolate 70% (callebaut)" → "dark chocolate 70%"
+            // Also strip percentages/descriptors: "fine sea salt" stays, "unsalted butter 82% fat" → "unsalted butter"
+            const coreName = simpleName.replace(/\s*\d+%.*/, "").trim();
 
-            if (descLower.includes(nameLower) || descLower.includes(simpleName)) {
+            const matched =
+              descLower.includes(nameLower) ||
+              descLower.includes(simpleName) ||
+              (coreName.length > 3 && descLower.includes(coreName));
+
+            if (matched) {
               stepDeductions.push({ ingredientId: ri.ingredientId, grams: remaining });
               remainingToDeduct.set(ri.ingredientId, 0); // mark as consumed
             }
