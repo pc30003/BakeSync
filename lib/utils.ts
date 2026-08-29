@@ -6,9 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatGrams(grams: number): string {
-  // Show grams with thousands separator so small deductions are visible
-  // e.g. 4997 → "4,997 g", 5000 → "5,000 g"
-  return `${Math.round(grams).toLocaleString("en-US")} g`;
+  // Smart units: grams for small amounts, kg for bulk (with enough precision
+  // to show small deductions).
+  if (grams < 2000) {
+    // Small items (salt, yeast, gelatin) — show in grams
+    return `${Math.round(grams).toLocaleString("en-US")} g`;
+  }
+  // Bulk items — show in kg with 3 decimals so a few grams still register
+  const kg = grams / 1000;
+  // Trim trailing zeros: 45.000 → 45, 4.997 → 4.997
+  const formatted = parseFloat(kg.toFixed(3)).toLocaleString("en-US", { maximumFractionDigits: 3 });
+  return `${formatted} kg`;
 }
 
 export function formatCurrency(amount: number, currency = "USD"): string {
