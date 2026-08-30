@@ -157,12 +157,12 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
                 <div className="flex flex-wrap gap-1 mt-0.5">
                   {item.deductions && item.deductions.length > 0 ? (
                     item.deductions.map((d, i) => (
-                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50">
                         📦 {d.ingredient.name} −{formatGrams(d.deductionGrams)}
                       </span>
                     ))
                   ) : item.ingredient && item.deductionGrams ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50">
                       📦 {item.ingredient.name} −{formatGrams(item.deductionGrams)}
                     </span>
                   ) : null}

@@ -89,7 +89,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       {success && (
-        <div role="status" className="px-3 py-2.5 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg">
+        <div role="status" className="px-3 py-2.5 bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg dark:bg-green-950/30 dark:border-green-900/50 dark:text-green-300">
           Wastage logged successfully.
         </div>
       )}
@@ -109,7 +109,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
           name="ingredientId"
           value={form.ingredientId}
           onChange={handleChange}
-          className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">— Select ingredient —</option>
           {ingredients.map((ing) => (
@@ -139,7 +139,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
                 value={form.quantityGrams}
                 onChange={handleChange}
                 placeholder="e.g. 250"
-                className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               />
               {selected && (
                 <p className="text-xs text-muted-foreground">
@@ -162,7 +162,7 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
           required
           value={form.reason}
           onChange={handleChange}
-          className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="">— Select reason —</option>
           {REASONS.map((r) => (
@@ -183,11 +183,11 @@ export function WastageLogForm({ ingredients }: WastageLogFormProps) {
           required
           value={form.shiftDate}
           onChange={handleChange}
-          className="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full px-3 py-2.5 min-h-[44px] rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
 
-      <Button type="submit" loading={isPending} className="w-full">
+      <Button type="submit" size="lg" loading={isPending} className="w-full">
         Log Wastage
       </Button>
     </form>
