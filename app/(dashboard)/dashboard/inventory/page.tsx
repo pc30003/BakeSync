@@ -7,6 +7,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { StockLevelBar } from "@/components/ui/stock-level-bar";
 import { formatGrams, formatCurrency } from "@/lib/utils";
+import { Package } from "lucide-react";
 
 export const metadata: Metadata = { title: "Inventory" };
 
@@ -61,6 +62,17 @@ export default async function InventoryPage() {
 
       <Card>
         <CardContent className="p-0">
+          {ingredients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4 text-muted-foreground">
+                <Package className="w-6 h-6" />
+              </div>
+              <p className="text-base font-semibold text-foreground">No ingredients tracked yet</p>
+              <p className="mt-1.5 text-sm text-muted-foreground max-w-sm">
+                Once ingredients are added to your bakery, their live stock levels and alerts will appear here.
+              </p>
+            </div>
+          ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -104,6 +116,7 @@ export default async function InventoryPage() {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

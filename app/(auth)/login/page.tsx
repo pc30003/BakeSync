@@ -10,7 +10,7 @@ const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#FFFBEB] p-4">
+    <main className="min-h-screen flex items-center justify-center bg-[#FFFBEB] dark:bg-background p-4">
       <div className="w-full max-w-md space-y-6">
 
         {/* Logo */}

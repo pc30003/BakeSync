@@ -28,7 +28,7 @@ export default async function PurchasingDashboard() {
         ingredient: { select: { id: true, name: true, unit: true, category: true } },
         supplier:   { select: { id: true, name: true, leadTimeDays: true, contactEmail: true } },
       },
-      orderBy: [{ urgency: "desc" }, { generatedAt: "desc" }],
+      orderBy: { generatedAt: "desc" },
     }),
     // CRITICAL only
     db.procurementRecommendation.count({
@@ -44,6 +44,13 @@ export default async function PurchasingDashboard() {
       },
     }),
   ]);
+
+  // Urgency is a string column so DB sort is alphabetical (wrong).
+  // Rank CRITICAL → HIGH → MEDIUM → LOW, newest first within a tier.
+  const URGENCY_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+  const sortedRecs = [...pendingRecs].sort(
+    (a, b) => (URGENCY_RANK[a.urgency] ?? 99) - (URGENCY_RANK[b.urgency] ?? 99)
+  );
 
   const urgencyVariant = (u: string) =>
     u === "CRITICAL" ? "danger" :
@@ -107,7 +114,7 @@ export default async function PurchasingDashboard() {
             </div>
           ) : (
             <ul className="divide-y divide-border" role="list">
-              {pendingRecs.map((rec) => (
+              {sortedRecs.map((rec) => (
                 <li key={rec.id} className="px-5 py-4 flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">

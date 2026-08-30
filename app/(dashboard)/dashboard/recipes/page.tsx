@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { redirect } from "next/navigation";
 import { RecipeListClient } from "@/components/recipes/recipe-list-client";
 
 export const metadata: Metadata = { title: "Recipes" };
@@ -9,6 +10,12 @@ export const revalidate = 2;
 
 export default async function RecipesPage() {
   const session = await auth();
+
+  // Recipes management is Head Baker only (matches nav gating)
+  if (session?.user.role !== "HEAD_BAKER") {
+    redirect("/dashboard");
+  }
+
   const bakeryId = session!.user.bakeryId;
 
   const recipes = await db.recipe.findMany({

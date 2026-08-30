@@ -77,11 +77,11 @@ export default async function AgentActivityPage() {
         {/* Capability tags — helps judges understand the system at a glance */}
         <div className="flex flex-wrap gap-2 mt-3">
           {[
-            { label: "Proactive monitoring",     color: "bg-purple-50 text-purple-700 border-purple-200" },
-            { label: "OpenAI function calling",  color: "bg-blue-50 text-blue-700 border-blue-200"       },
-            { label: "FEFO stock management",    color: "bg-amber-50 text-amber-700 border-amber-200"    },
-            { label: "Autonomous procurement",   color: "bg-green-50 text-green-700 border-green-200"    },
-            { label: "Multi-role orchestration", color: "bg-pink-50 text-pink-700 border-pink-200"       },
+            { label: "Proactive monitoring",     color: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900/50" },
+            { label: "OpenAI function calling",  color: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/50"       },
+            { label: "FEFO stock management",    color: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50"    },
+            { label: "Autonomous procurement",   color: "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-900/50"    },
+            { label: "Multi-role orchestration", color: "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-900/50"       },
           ].map(tag => (
             <span
               key={tag.label}
@@ -165,19 +165,19 @@ function AgentExplainer() {
           {
             step:  "1. Sense",
             icon:  "🔍",
-            color: "bg-blue-50 border-blue-200",
+            color: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900/50",
             text:  "The monitor runs every hour. It reads stock levels, expiry dates, and upcoming orders — building a complete bakery state snapshot.",
           },
           {
             step:  "2. Reason",
             icon:  "🤖",
-            color: "bg-purple-50 border-purple-200",
+            color: "bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-900/50",
             text:  "OpenAI GPT-4o receives the snapshot via structured function calling. It reasons over constraints — oven capacity, FEFO lots, multi-stage baking timelines — and returns a typed production plan.",
           },
           {
             step:  "3. Act",
             icon:  "⚡",
-            color: "bg-amber-50 border-amber-200",
+            color: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50",
             text:  "The plan is written to the database: schedules, checklists, stock deductions, procurement recommendations, and agent alerts — all without human instruction.",
           },
         ].map(s => (

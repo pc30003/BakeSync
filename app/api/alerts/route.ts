@@ -22,10 +22,17 @@ export async function GET(req: NextRequest) {
         isDismissed: false,
         ...(unreadOnly && { isRead: false }),
       },
-      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
     });
 
-    return ok(alerts);
+    // Severity is a string column, so DB sort would be alphabetical (wrong).
+    // Sort by true severity rank: CRITICAL → WARNING → INFO, newest first within a tier.
+    const SEVERITY_RANK: Record<string, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+    const sorted = [...alerts].sort(
+      (a, b) => (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99)
+    );
+
+    return ok(sorted);
   } catch (err) {
     return serverError(err);
   }

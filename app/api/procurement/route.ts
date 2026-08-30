@@ -24,14 +24,17 @@ export async function GET(req: NextRequest) {
         supplier:   { select: { id: true, name: true, leadTimeDays: true, contactEmail: true } },
         approvedBy: { select: { id: true, name: true } },
       },
-      orderBy: [
-        // Sort CRITICAL → HIGH → MEDIUM → LOW
-        { urgency: "desc" },
-        { generatedAt: "desc" },
-      ],
+      orderBy: { generatedAt: "desc" },
     });
 
-    return ok(recommendations);
+    // Urgency is a string column, so DB sort would be alphabetical (wrong).
+    // Sort by true severity rank: CRITICAL → HIGH → MEDIUM → LOW, newest first within a tier.
+    const URGENCY_RANK: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    const sorted = [...recommendations].sort(
+      (a, b) => (URGENCY_RANK[a.urgency] ?? 99) - (URGENCY_RANK[b.urgency] ?? 99)
+    );
+
+    return ok(sorted);
   } catch (err) {
     return serverError(err);
   }

@@ -60,7 +60,7 @@ export async function handleStockChange({
         bakeryId,
         relatedEntityId: ingredientId,
         isDismissed: false,
-        type: { in: ["SHORTFALL", "LOW_STOCK"] },
+        type: "SHORTFALL",
       },
     });
 

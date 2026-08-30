@@ -50,13 +50,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
         data:  { stockGrams: newStock, alertLevel },
       });
 
-      // Dismiss any related alerts for this ingredient since stock is restored
+      // Dismiss any related stock-shortfall alerts for this ingredient since stock is restored
       await db.agentAlert.updateMany({
         where: {
           bakeryId:        session!.user.bakeryId,
           relatedEntityId: existing.ingredientId,
           isDismissed:     false,
-          type:            { in: ["SHORTFALL", "LOW_STOCK"] },
+          type:            "SHORTFALL",
         },
         data: { isDismissed: true },
       });

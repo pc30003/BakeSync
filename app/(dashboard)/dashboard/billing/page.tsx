@@ -98,11 +98,15 @@ export default async function BillingPage() {
                 </li>
               ))}
             </ul>
-            <div className="pt-2">
+            <div className="pt-2 space-y-2">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium">
                 <CreditCard className="w-4 h-4" />
-                Stripe integration coming soon
+                Paid plans launching soon
               </div>
+              <p className="text-xs text-muted-foreground">
+                You're currently on the free plan with full access to core features.
+                Secure online checkout and plan management will be available here when paid tiers go live.
+              </p>
             </div>
           </CardContent>
         </Card>

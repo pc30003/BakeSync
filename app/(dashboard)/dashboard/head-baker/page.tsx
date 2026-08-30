@@ -62,10 +62,17 @@ export default async function HeadBakerDashboard() {
     }),
     db.agentAlert.findMany({
       where: { bakeryId, isDismissed: false },
-      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-      take: 4,
+      orderBy: { createdAt: "desc" },
+      take: 20, // over-fetch, then rank by true severity before slicing to 4
     }),
   ]);
+
+  // Severity is a string column so DB sort is alphabetical (wrong).
+  // Rank CRITICAL → WARNING → INFO before taking the top 4.
+  const SEVERITY_RANK: Record<string, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+  const unreadAlertsRanked = [...unreadAlerts]
+    .sort((a, b) => (SEVERITY_RANK[a.severity] ?? 99) - (SEVERITY_RANK[b.severity] ?? 99))
+    .slice(0, 4);
 
   const greetingHour = now.getHours();
   const greeting =
@@ -119,7 +126,7 @@ export default async function HeadBakerDashboard() {
             Agent Alerts
           </h2>
           <div className="space-y-2">
-            {unreadAlerts.map((alert) => (
+            {unreadAlertsRanked.map((alert) => (
               <AlertBanner key={alert.id} alert={alert as any} />
             ))}
           </div>

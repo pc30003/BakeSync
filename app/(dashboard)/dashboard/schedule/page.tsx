@@ -137,7 +137,7 @@ export default async function SchedulePage() {
 
               {/* AI reasoning notes */}
               {schedule.aiNotes && (
-                <div className="mt-3 px-4 py-3 rounded-xl bg-purple-50 border border-purple-100 text-xs text-purple-800 leading-relaxed">
+                <div className="mt-3 px-4 py-3 rounded-xl bg-purple-50 border border-purple-100 text-xs text-purple-800 leading-relaxed dark:bg-purple-950/30 dark:border-purple-900/50 dark:text-purple-200">
                   <p className="font-semibold mb-0.5 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 inline-block" />
                     Agent reasoning

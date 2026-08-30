@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -41,26 +41,26 @@ const STAGE_LABELS: Record<string, string> = {
 };
 
 const STAGE_COLORS: Record<string, string> = {
-  MIX:          "bg-blue-50 text-blue-700 border-blue-200",
-  AUTOLYSE:     "bg-cyan-50 text-cyan-700 border-cyan-200",
-  BULK_FERMENT: "bg-purple-50 text-purple-700 border-purple-200",
-  SHAPE:        "bg-indigo-50 text-indigo-700 border-indigo-200",
-  PROOF:        "bg-violet-50 text-violet-700 border-violet-200",
-  RETARD:       "bg-sky-50 text-sky-700 border-sky-200",
-  BAKE:         "bg-amber-50 text-amber-700 border-amber-200",
-  COOL:         "bg-teal-50 text-teal-700 border-teal-200",
-  FINISH:       "bg-pink-50 text-pink-700 border-pink-200",
-  PACK:         "bg-gray-50 text-gray-700 border-gray-200",
+  MIX:          "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
+  AUTOLYSE:     "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-900/50",
+  BULK_FERMENT: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/50",
+  SHAPE:        "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50",
+  PROOF:        "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900/50",
+  RETARD:       "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900/50",
+  BAKE:         "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  COOL:         "bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-900/50",
+  FINISH:       "bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-900/50",
+  PACK:         "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/60 dark:text-gray-300 dark:border-gray-700",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  BREAD:        "bg-amber-100 text-amber-800",
-  PASTRY:       "bg-pink-100 text-pink-800",
-  CAKE:         "bg-purple-100 text-purple-800",
-  BISCUIT:      "bg-orange-100 text-orange-800",
-  VIENNOISERIE: "bg-yellow-100 text-yellow-800",
-  SAVOURY:      "bg-green-100 text-green-800",
-  OTHER:        "bg-gray-100 text-gray-700",
+  BREAD:        "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300",
+  PASTRY:       "bg-pink-100 text-pink-800 dark:bg-pink-950/50 dark:text-pink-300",
+  CAKE:         "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300",
+  BISCUIT:      "bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300",
+  VIENNOISERIE: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300",
+  SAVOURY:      "bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300",
+  OTHER:        "bg-gray-100 text-gray-700 dark:bg-gray-800/60 dark:text-gray-300",
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -69,6 +69,12 @@ export default async function RecipeDetailPage(
   { params }: { params: { id: string } }
 ) {
   const session  = await auth();
+
+  // Recipes management is Head Baker only (matches nav gating)
+  if (session?.user.role !== "HEAD_BAKER") {
+    redirect("/dashboard");
+  }
+
   const bakeryId = session!.user.bakeryId;
   const isHeadBaker = session!.user.role === "HEAD_BAKER";
 

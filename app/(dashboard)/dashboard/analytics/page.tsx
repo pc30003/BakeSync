@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatGrams, formatCurrency } from "@/lib/utils";
 import { BarChart3, TrendingDown, Package, Zap } from "lucide-react";
 import { subDays, startOfDay } from "date-fns";
+import { redirect } from "next/navigation";
 import { AIWastageButton } from "@/components/agent/ai-wastage-button";
 
 export const metadata: Metadata = { title: "Analytics" };
@@ -15,6 +16,12 @@ export const revalidate = 2;
 
 export default async function AnalyticsPage() {
   const session  = await auth();
+
+  // Analytics is Head Baker only (matches nav gating)
+  if (session?.user.role !== "HEAD_BAKER") {
+    redirect("/dashboard");
+  }
+
   const bakeryId = session!.user.bakeryId;
   const now      = new Date();
   const last30   = subDays(startOfDay(now), 30);

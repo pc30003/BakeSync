@@ -13,16 +13,16 @@ interface StatCardProps {
 
 const variantBorder: Record<string, string> = {
   default: "border-border",
-  warning: "border-yellow-200 bg-yellow-50/50",
-  danger:  "border-red-200 bg-red-50/50",
-  success: "border-green-200 bg-green-50/50",
+  warning: "border-yellow-200 bg-yellow-50/50 dark:border-yellow-900/50 dark:bg-yellow-950/20",
+  danger:  "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/20",
+  success: "border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/20",
 };
 
 const variantIcon: Record<string, string> = {
   default: "bg-primary/10 text-primary",
-  warning: "bg-yellow-100 text-yellow-700",
-  danger:  "bg-red-100 text-red-700",
-  success: "bg-green-100 text-green-700",
+  warning: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  danger:  "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  success: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
 };
 
 export function StatCard({
