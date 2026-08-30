@@ -8,6 +8,7 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime, getBatchStatusColor, formatGrams } from "@/lib/utils";
+import { getCurrentShift } from "@/lib/shifts";
 import {
   ShoppingBag, Package, ShoppingCart, CalendarDays, AlertTriangle
 } from "lucide-react";
@@ -22,6 +23,7 @@ export default async function HeadBakerDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now   = new Date();
   const today = startOfDay(now);
+  const currentShift = getCurrentShift(now).type;
 
   const [
     activeOrders,
@@ -48,6 +50,7 @@ export default async function HeadBakerDashboard() {
     db.productionSchedule.findFirst({
       where: {
         bakeryId,
+        shiftType: currentShift,
         scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
       },
       include: {

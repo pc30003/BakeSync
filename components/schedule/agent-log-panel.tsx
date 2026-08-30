@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { cn, formatGrams } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ALL_SHIFT_TYPES, getShiftLabel, getShiftIcon } from "@/lib/shifts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
   const [done,      setDone]      = useState(false);
   const [expanded,  setExpanded]  = useState(true);
   const [scheduleId, setScheduleId] = useState<string | null>(null);
+  const [selectedShift, setSelectedShift] = useState<string>(shiftType);
   const logEndRef     = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const entryCounter  = useRef(0);
@@ -98,7 +100,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
       const res = await fetch("/api/agent/stream", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ scheduleDate, shiftType, forceRegenerate: force }),
+        body:    JSON.stringify({ scheduleDate, shiftType: selectedShift, forceRegenerate: force }),
       });
 
       if (!res.ok || !res.body) {
@@ -191,7 +193,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
               )}
             </p>
             <p className="text-xs text-muted-foreground">
-              {shiftType} shift · {new Date(scheduleDate).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short" })}
+              {getShiftLabel(selectedShift)} · {new Date(scheduleDate).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short" })}
             </p>
           </div>
         </div>
@@ -207,22 +209,37 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
             </button>
           )}
           {!running && (
-            <Button
-              size="sm"
-              variant={done && !hasError ? "outline" : "primary"}
-              onClick={() => runAgent(hasExisting || done)}
-              leftIcon={done
-                ? <RefreshCw className="w-3.5 h-3.5" />
-                : <Zap className="w-3.5 h-3.5" />
-              }
-            >
-              {done && !hasError
-                ? "Regenerate"
-                : hasExisting
-                  ? "Regenerate schedule"
-                  : "Generate schedule"
-              }
-            </Button>
+            <>
+              {/* Shift selector */}
+              <select
+                value={selectedShift}
+                onChange={(e) => setSelectedShift(e.target.value)}
+                className="text-xs rounded-lg border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                aria-label="Select shift to generate schedule for"
+              >
+                {ALL_SHIFT_TYPES.map((s) => (
+                  <option key={s} value={s}>
+                    {getShiftIcon(s)} {getShiftLabel(s)}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                variant={done && !hasError ? "outline" : "primary"}
+                onClick={() => runAgent(hasExisting || done)}
+                leftIcon={done
+                  ? <RefreshCw className="w-3.5 h-3.5" />
+                  : <Zap className="w-3.5 h-3.5" />
+                }
+              >
+                {done && !hasError
+                  ? "Regenerate"
+                  : hasExisting
+                    ? "Regenerate schedule"
+                    : "Generate schedule"
+                }
+              </Button>
+            </>
           )}
         </div>
       </div>

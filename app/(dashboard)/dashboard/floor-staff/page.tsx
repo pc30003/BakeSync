@@ -3,11 +3,13 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
+import { getCurrentShift } from "@/lib/shifts";
 import { startOfDay, endOfDay } from "date-fns";
 import { FloorShiftChecklist } from "@/components/floor/shift-checklist";
 import { ScheduleWatcher } from "@/components/floor/schedule-watcher";
+import { ShiftBanner } from "@/components/floor/shift-banner";
+import { CheckCircle2, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "My Shift" };
 
@@ -16,15 +18,20 @@ export default async function FloorStaffDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now = new Date();
 
+  // Determine which shift is currently active
+  const currentShift = getCurrentShift(now);
+
+  // Only load the approved schedule for the CURRENTLY ACTIVE shift
   const todaySchedule = await db.productionSchedule.findFirst({
     where: {
       bakeryId,
       isApproved: true,
+      shiftType: currentShift.type,
       scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
     },
     include: {
       batches: {
-        where: { status: { in: ["SCHEDULED", "IN_PROGRESS"] } },
+        where: { status: { in: ["SCHEDULED", "IN_PROGRESS", "COMPLETED"] } },
         include: {
           recipe: { select: { name: true, category: true } },
           checklist: {
@@ -48,6 +55,17 @@ export default async function FloorStaffDashboard() {
 
   const hasSchedule = !!todaySchedule && todaySchedule.batches.length > 0;
 
+  // Compute overall shift completion
+  let totalSteps = 0;
+  let doneSteps  = 0;
+  if (todaySchedule) {
+    for (const batch of todaySchedule.batches) {
+      totalSteps += batch.checklist.length;
+      doneSteps  += batch.checklist.filter((c) => c.status === "DONE").length;
+    }
+  }
+  const shiftComplete = hasSchedule && totalSteps > 0 && doneSteps === totalSteps;
+
   return (
     <div className="space-y-6">
       <ScheduleWatcher hasSchedule={hasSchedule} />
@@ -56,22 +74,47 @@ export default async function FloorStaffDashboard() {
         description={`${formatDate(now)} — your shift overview`}
       />
 
-      {/* Batch overview cards */}
-      {!todaySchedule || todaySchedule.batches.length === 0 ? (
+      {/* Live shift banner */}
+      <ShiftBanner />
+
+      {/* Shift complete celebration */}
+      {shiftComplete && (
+        <Card className="border-green-200 bg-green-50/60">
+          <CardContent className="py-8 text-center space-y-2">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-7 h-7 text-green-600" />
+            </div>
+            <p className="text-lg font-bold text-green-800">Shift complete! 🎉</p>
+            <p className="text-sm text-green-700">
+              All {totalSteps} steps done across {todaySchedule!.batches.length} batch{todaySchedule!.batches.length !== 1 ? "es" : ""}. Great work.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Batch cards / empty state */}
+      {!hasSchedule ? (
         <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            No active batches for your shift today. Check back later or ask your head baker.
+          <CardContent className="py-12 text-center space-y-2">
+            <Clock className="w-10 h-10 mx-auto text-muted-foreground/30" />
+            <p className="text-sm font-medium text-muted-foreground">
+              No active batches for the {currentShift.label.toLowerCase()}
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+              Either no schedule has been approved for this shift yet, or you're between shifts. Check back when your shift begins.
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {todaySchedule.batches.map((batch) => {
+          {todaySchedule!.batches.map((batch) => {
             const done = batch.checklist.filter((c) => c.status === "DONE").length;
             const total = batch.checklist.length;
             const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            const batchComplete = total > 0 && done === total;
 
             return (
-              <Card key={batch.id}>
+              <Card key={batch.id} className={batchComplete ? "border-green-200" : undefined}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -90,13 +133,16 @@ export default async function FloorStaffDashboard() {
                   </div>
                   {/* Progress bar */}
                   <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                    <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${batchComplete ? "bg-green-500" : "bg-primary"}`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </CardHeader>
 
                 <FloorShiftChecklist
                   batchId={batch.id}
-                  scheduleId={todaySchedule.id}
+                  scheduleId={todaySchedule!.id}
                   initialItems={batch.checklist as any}
                 />
               </Card>
