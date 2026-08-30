@@ -177,7 +177,7 @@ export async function writeSchedule(
         let perStepAmounts: number[];
         if (allHaveStated) {
           // Use AI amounts, but scale them so the total exactly equals the recipe total
-          const statedSum = stated.reduce((a, b) => a + (b ?? 0), 0);
+          const statedSum = stated.reduce((a: number, b) => a + (b ?? 0), 0);
           perStepAmounts = stated.map((s) => (s! / statedSum) * totalGrams);
         } else {
           // Fall back to even split
