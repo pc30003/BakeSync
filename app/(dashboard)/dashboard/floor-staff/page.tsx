@@ -18,8 +18,14 @@ export default async function FloorStaffDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now = new Date();
 
+  // Use the bakery's timezone so the active shift matches the bakery's local
+  // clock, not the UTC server clock (Vercel runs in UTC).
+  const bakeryTz = (await db.bakery.findUnique({
+    where: { id: bakeryId }, select: { timezone: true },
+  }))?.timezone ?? undefined;
+
   // Determine which shift is currently active
-  const currentShift = getCurrentShift(now);
+  const currentShift = getCurrentShift(now, bakeryTz);
 
   // Only load the approved schedule for the CURRENTLY ACTIVE shift
   const todaySchedule = await db.productionSchedule.findFirst({
@@ -68,14 +74,14 @@ export default async function FloorStaffDashboard() {
 
   return (
     <div className="space-y-6">
-      <ScheduleWatcher hasSchedule={hasSchedule} />
+      <ScheduleWatcher hasSchedule={hasSchedule} timezone={bakeryTz} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — your shift overview`}
       />
 
       {/* Live shift banner */}
-      <ShiftBanner />
+      <ShiftBanner timezone={bakeryTz} />
 
       {/* Shift complete celebration */}
       {shiftComplete && (

@@ -7,6 +7,8 @@ import { getCurrentShift } from "@/lib/shifts";
 interface ScheduleWatcherProps {
   /** Whether an approved schedule for the current shift is displayed */
   hasSchedule: boolean;
+  /** Bakery timezone so shift detection matches the server (UTC-hosted) */
+  timezone?: string;
 }
 
 /**
@@ -16,16 +18,16 @@ interface ScheduleWatcherProps {
  * schedule for the shift they're actually in. Never refreshes on every poll,
  * so it won't interfere with checklist ticking mid-work.
  */
-export function ScheduleWatcher({ hasSchedule }: ScheduleWatcherProps) {
+export function ScheduleWatcher({ hasSchedule, timezone }: ScheduleWatcherProps) {
   const router = useRouter();
   const lastKnown = useRef(hasSchedule);
-  const lastShift = useRef(getCurrentShift().type);
+  const lastShift = useRef(getCurrentShift(new Date(), timezone).type);
 
   useEffect(() => {
     const id = setInterval(async () => {
       try {
         // 1. Detect shift window change (Morning → Afternoon etc.)
-        const nowShift = getCurrentShift().type;
+        const nowShift = getCurrentShift(new Date(), timezone).type;
         if (nowShift !== lastShift.current) {
           lastShift.current = nowShift;
           router.refresh();
@@ -57,7 +59,7 @@ export function ScheduleWatcher({ hasSchedule }: ScheduleWatcherProps) {
     }, 2000);
 
     return () => clearInterval(id);
-  }, [router]);
+  }, [router, timezone]);
 
   return null;
 }

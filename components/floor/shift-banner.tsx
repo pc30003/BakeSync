@@ -8,7 +8,7 @@ import { getCurrentShift, getNextShift } from "@/lib/shifts";
  * Shows the current shift, its time window, and a countdown to the next shift.
  * Updates every minute.
  */
-export function ShiftBanner() {
+export function ShiftBanner({ timezone }: { timezone?: string }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -21,8 +21,8 @@ export function ShiftBanner() {
     return <div className="h-16 rounded-xl bg-muted/40 animate-pulse" aria-hidden="true" />;
   }
 
-  const current = getCurrentShift(now);
-  const { shift: next, minutesUntil } = getNextShift(now);
+  const current = getCurrentShift(now, timezone);
+  const { shift: next, minutesUntil } = getNextShift(now, timezone);
 
   const hours = Math.floor(minutesUntil / 60);
   const mins  = minutesUntil % 60;

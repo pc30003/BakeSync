@@ -23,7 +23,13 @@ export default async function HeadBakerDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now   = new Date();
   const today = startOfDay(now);
-  const currentShift = getCurrentShift(now).type;
+
+  // Use the bakery's timezone so the "current shift" matches the bakery's local
+  // clock, not the UTC server clock (Vercel runs in UTC).
+  const bakeryTz = (await db.bakery.findUnique({
+    where: { id: bakeryId }, select: { timezone: true },
+  }))?.timezone ?? undefined;
+  const currentShift = getCurrentShift(now, bakeryTz).type;
 
   const [
     activeOrders,

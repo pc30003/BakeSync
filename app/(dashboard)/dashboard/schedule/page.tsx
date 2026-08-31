@@ -21,8 +21,12 @@ export default async function SchedulePage() {
   const isHead   = session!.user.role === "HEAD_BAKER";
   const now      = new Date();
 
-  // Default the agent panel to the shift that's currently active
-  const currentShift = getCurrentShift(now).type;
+  // Default the agent panel to the shift that's currently active — computed in
+  // the bakery's timezone so UTC hosting doesn't skew it.
+  const bakeryTz = (await db.bakery.findUnique({
+    where: { id: bakeryId }, select: { timezone: true },
+  }))?.timezone ?? undefined;
+  const currentShift = getCurrentShift(now, bakeryTz).type;
 
   // Load today + next 2 days
   const schedules = await db.productionSchedule.findMany({
