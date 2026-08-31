@@ -4,11 +4,9 @@ import { db } from "@/lib/db";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
-import { getCurrentShift } from "@/lib/shifts";
 import { startOfDay, endOfDay } from "date-fns";
 import { FloorShiftChecklist } from "@/components/floor/shift-checklist";
 import { ScheduleWatcher } from "@/components/floor/schedule-watcher";
-import { ShiftBanner } from "@/components/floor/shift-banner";
 import { CheckCircle2, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "My Shift" };
@@ -18,21 +16,11 @@ export default async function FloorStaffDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now = new Date();
 
-  // Use the bakery's timezone so the active shift matches the bakery's local
-  // clock, not the UTC server clock (Vercel runs in UTC).
-  const bakeryTz = (await db.bakery.findUnique({
-    where: { id: bakeryId }, select: { timezone: true },
-  }))?.timezone ?? undefined;
-
-  // Determine which shift is currently active
-  const currentShift = getCurrentShift(now, bakeryTz);
-
-  // Only load the approved schedule for the CURRENTLY ACTIVE shift
+  // Load today's approved schedule (by date).
   const todaySchedule = await db.productionSchedule.findFirst({
     where: {
       bakeryId,
       isApproved: true,
-      shiftType: currentShift.type,
       scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
     },
     include: {
@@ -61,7 +49,7 @@ export default async function FloorStaffDashboard() {
 
   const hasSchedule = !!todaySchedule && todaySchedule.batches.length > 0;
 
-  // Compute overall shift completion
+  // Compute overall completion across all of today's batches
   let totalSteps = 0;
   let doneSteps  = 0;
   if (todaySchedule) {
@@ -74,24 +62,21 @@ export default async function FloorStaffDashboard() {
 
   return (
     <div className="space-y-6">
-      <ScheduleWatcher hasSchedule={hasSchedule} timezone={bakeryTz} />
+      <ScheduleWatcher hasSchedule={hasSchedule} />
       <PageHeader
         title={`${greeting}, ${session!.user.name?.split(" ")[0] ?? "Chef"}`}
         description={`${formatDate(now)} — your shift overview`}
       />
 
-      {/* Live shift banner */}
-      <ShiftBanner timezone={bakeryTz} />
-
       {/* Shift complete celebration */}
       {shiftComplete && (
-        <Card className="border-green-200 bg-green-50/60">
+        <Card className="border-green-200 bg-green-50/60 dark:border-green-900/50 dark:bg-green-950/20">
           <CardContent className="py-8 text-center space-y-2">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-7 h-7 text-green-600" />
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto dark:bg-green-900/40">
+              <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-300" />
             </div>
-            <p className="text-lg font-bold text-green-800">Shift complete! 🎉</p>
-            <p className="text-sm text-green-700">
+            <p className="text-lg font-bold text-green-800 dark:text-green-200">Shift complete! 🎉</p>
+            <p className="text-sm text-green-700 dark:text-green-300">
               All {totalSteps} steps done across {todaySchedule!.batches.length} batch{todaySchedule!.batches.length !== 1 ? "es" : ""}. Great work.
             </p>
           </CardContent>
@@ -104,10 +89,10 @@ export default async function FloorStaffDashboard() {
           <CardContent className="py-12 text-center space-y-2">
             <Clock className="w-10 h-10 mx-auto text-muted-foreground/30" />
             <p className="text-sm font-medium text-muted-foreground">
-              No active batches for the {currentShift.label.toLowerCase()}
+              No active batches today
             </p>
             <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-              Either no schedule has been approved for this shift yet, or you're between shifts. Check back when your shift begins.
+              Once your head baker approves today's production schedule, your batch checklists will appear here.
             </p>
           </CardContent>
         </Card>
@@ -120,7 +105,7 @@ export default async function FloorStaffDashboard() {
             const batchComplete = total > 0 && done === total;
 
             return (
-              <Card key={batch.id} className={batchComplete ? "border-green-200" : undefined}>
+              <Card key={batch.id} className={batchComplete ? "border-green-200 dark:border-green-900/50" : undefined}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <div>

@@ -8,7 +8,6 @@ import { AlertBanner } from "@/components/ui/alert-banner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, formatTime, getBatchStatusColor, formatGrams } from "@/lib/utils";
-import { getCurrentShift } from "@/lib/shifts";
 import {
   ShoppingBag, Package, ShoppingCart, CalendarDays, AlertTriangle
 } from "lucide-react";
@@ -23,13 +22,6 @@ export default async function HeadBakerDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now   = new Date();
   const today = startOfDay(now);
-
-  // Use the bakery's timezone so the "current shift" matches the bakery's local
-  // clock, not the UTC server clock (Vercel runs in UTC).
-  const bakeryTz = (await db.bakery.findUnique({
-    where: { id: bakeryId }, select: { timezone: true },
-  }))?.timezone ?? undefined;
-  const currentShift = getCurrentShift(now, bakeryTz).type;
 
   const [
     activeOrders,
@@ -56,7 +48,6 @@ export default async function HeadBakerDashboard() {
     db.productionSchedule.findFirst({
       where: {
         bakeryId,
-        shiftType: currentShift,
         scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
       },
       include: {

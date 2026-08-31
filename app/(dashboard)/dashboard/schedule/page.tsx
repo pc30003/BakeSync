@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { AgentLogPanel } from "@/components/schedule/agent-log-panel";
 import { ScheduleApproveButton } from "@/components/schedule/schedule-approve-button";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
-import { getCurrentShift } from "@/lib/shifts";
 import { startOfDay, endOfDay, addDays, format } from "date-fns";
 import { CalendarDays, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Production Schedule" };
+
+// The agent panel generates for the morning shift by default.
+const DEFAULT_SHIFT = "MORNING";
 
 // Revalidate every 2 seconds so checklist progress updates for Head Baker
 export const revalidate = 2;
@@ -20,13 +22,6 @@ export default async function SchedulePage() {
   const bakeryId = session!.user.bakeryId;
   const isHead   = session!.user.role === "HEAD_BAKER";
   const now      = new Date();
-
-  // Default the agent panel to the shift that's currently active — computed in
-  // the bakery's timezone so UTC hosting doesn't skew it.
-  const bakeryTz = (await db.bakery.findUnique({
-    where: { id: bakeryId }, select: { timezone: true },
-  }))?.timezone ?? undefined;
-  const currentShift = getCurrentShift(now, bakeryTz).type;
 
   // Load today + next 2 days
   const schedules = await db.productionSchedule.findMany({
@@ -54,7 +49,7 @@ export default async function SchedulePage() {
   const todaySchedule = schedules.find(
     (s) =>
       startOfDay(s.scheduleDate).getTime() === startOfDay(now).getTime() &&
-      s.shiftType === currentShift
+      s.shiftType === DEFAULT_SHIFT
   );
 
   return (
@@ -76,7 +71,7 @@ export default async function SchedulePage() {
       {isHead && (
         <AgentLogPanel
           scheduleDate={todayStr}
-          shiftType={currentShift}
+          shiftType={DEFAULT_SHIFT}
           hasExisting={!!todaySchedule}
         />
       )}
