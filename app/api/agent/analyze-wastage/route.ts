@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const content = completion.choices[0]?.message?.content ?? "";
     let parsed;
     try {
-      parsed = JSON.parse(content);
+      parsed = JSON.parse(extractJson(content));
     } catch {
       parsed = { analysis: content, suggestions: [], topIssue: "Unable to parse", estimatedSavings: "N/A" };
     }
@@ -98,4 +98,22 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return serverError(err);
   }
+}
+
+/**
+ * LLMs often wrap JSON in a markdown code fence (```json … ```), or add a
+ * sentence before/after it. Strip the fence and extract the JSON object so
+ * JSON.parse doesn't choke on the wrapper.
+ */
+function extractJson(raw: string): string {
+  let s = raw.trim();
+  // Remove ```json / ``` fences if present
+  s = s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  // Fall back to the substring between the first { and last }
+  const first = s.indexOf("{");
+  const last  = s.lastIndexOf("}");
+  if (first !== -1 && last !== -1 && last > first) {
+    return s.slice(first, last + 1);
+  }
+  return s;
 }

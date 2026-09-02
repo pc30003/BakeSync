@@ -62,9 +62,9 @@ export function AIWastageButton() {
           )}
 
           {result.estimatedSavings && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
-              <DollarSign className="w-4 h-4 text-green-600 shrink-0" />
-              <p className="text-sm text-green-700">Potential monthly savings: <strong>{result.estimatedSavings}</strong></p>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900/50">
+              <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-sm text-green-700 dark:text-green-300">Potential monthly savings: <strong>{result.estimatedSavings}</strong></p>
             </div>
           )}
 
