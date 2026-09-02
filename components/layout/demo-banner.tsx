@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Bot, X, ExternalLink, Activity, Clock } from "lucide-react";
+import { Bot, X, Activity, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TaskTick {
@@ -99,19 +98,6 @@ export function DemoBanner() {
             </span>
           )}
         </div>
-
-        <Link
-          href="/signup"
-          className={cn(
-            "hidden sm:flex items-center gap-1.5 shrink-0",
-            "text-[11px] font-semibold text-amber-900",
-            "bg-amber-400 hover:bg-amber-300 transition-colors",
-            "px-3 py-1.5 rounded-full"
-          )}
-        >
-          Get full access
-          <ExternalLink className="w-3 h-3" aria-hidden="true" />
-        </Link>
 
         <button
           onClick={() => setDismissed(true)}
