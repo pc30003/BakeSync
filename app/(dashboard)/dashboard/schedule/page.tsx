@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AgentLogPanel } from "@/components/schedule/agent-log-panel";
 import { ScheduleApproveButton } from "@/components/schedule/schedule-approve-button";
+import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
 import { startOfDay, endOfDay, addDays, format } from "date-fns";
 import { CalendarDays, Clock } from "lucide-react";
@@ -54,6 +55,8 @@ export default async function SchedulePage() {
 
   return (
     <div className="space-y-6">
+      {/* Keeps batch progress bars live for the Head Baker without a manual refresh */}
+      <AutoRefresh interval={3000} />
 
       {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
