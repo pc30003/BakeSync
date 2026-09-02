@@ -56,27 +56,26 @@ export async function POST(req: NextRequest) {
     if (!ingredient) return notFound("Ingredient");
 
     // ── Idempotency guard ────────────────────────────────────────────────
-    // Prevent double-restock: if this ingredient was already ordered via the
-    // AI panel in the last 10 minutes, refuse. This protects against repeat
-    // clicks across a "Refresh", multiple tabs, or a double-submit — the same
-    // class of bug as approving a procurement recommendation twice.
+    // Prevent double-restock: if this exact ingredient was already ordered via
+    // the AI panel in the last 10 minutes, refuse. Guards against repeat clicks
+    // across a "Refresh", multiple tabs, or a double-submit. We match on the
+    // action summary (which embeds the ingredient name) so this stays portable
+    // and never depends on JSON-path query support.
     const recentOrder = await db.agentAction.findFirst({
       where: {
         bakeryId,
         type:        "PROCUREMENT_RECOMMENDATION",
         completedAt: { gte: new Date(Date.now() - 10 * 60 * 1000) },
-        details:     { path: ["ingredientId"], equals: ingredient.id },
+        summary:     { contains: `${ingredient.name} — stock restored` },
       },
     });
     if (recentOrder) {
-      return error(`${ingredient.name} was already ordered recently — stock is restored.`, 409);
+      return error(`${ingredient.name} was already ordered in the last few minutes — stock is restored.`, 409);
     }
-
-    // Second, connector-agnostic guard: if the ingredient is already healthy
-    // (comfortably above its reorder threshold), there is nothing to restock.
-    if (Number(ingredient.stockGrams) > Number(ingredient.reorderThresholdGrams)) {
-      return error(`${ingredient.name} is already well-stocked — no order needed.`, 409);
-    }
+    // NOTE: we intentionally do NOT block based on current stock level. The AI
+    // panel is for PROACTIVE ordering — restocking before an ingredient runs
+    // low — so a healthy stock level is a valid reason to order more. The
+    // recent-order guard above is what prevents accidental double-restock.
 
     const currentStock = Number(ingredient.stockGrams);
     const newStock     = currentStock + orderGrams;
