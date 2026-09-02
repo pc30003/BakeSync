@@ -97,6 +97,9 @@ export default async function PurchasingDashboard() {
         />
       </div>
 
+      {/* AI Procurement Intelligence — lead with the AI insight */}
+      <AIProcurementButton />
+
       {/* Recommendations list */}
       <Card>
         <CardHeader>
@@ -148,9 +151,6 @@ export default async function PurchasingDashboard() {
           )}
         </CardContent>
       </Card>
-
-      {/* AI Procurement Intelligence */}
-      <AIProcurementButton />
     </div>
   );
 }

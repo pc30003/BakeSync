@@ -68,11 +68,11 @@ export function AIProcurementButton() {
           <p className="text-sm text-foreground">{result.summary}</p>
 
           {result.riskAlert && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-900/50">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-amber-700">Supply Risk</p>
-                <p className="text-sm text-amber-900">{result.riskAlert}</p>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Supply Risk</p>
+                <p className="text-sm text-amber-900 dark:text-amber-200">{result.riskAlert}</p>
               </div>
             </div>
           )}
