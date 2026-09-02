@@ -18,10 +18,10 @@ interface ToastItemProps {
 }
 
 const severityConfig = {
-  INFO:     { icon: Info,          bg: "bg-blue-50 border-blue-200",   text: "text-blue-800",   iconColor: "text-blue-500" },
-  WARNING:  { icon: AlertTriangle, bg: "bg-amber-50 border-amber-200", text: "text-amber-800",  iconColor: "text-amber-500" },
-  CRITICAL: { icon: AlertCircle,   bg: "bg-red-50 border-red-200",     text: "text-red-800",    iconColor: "text-red-500" },
-  SUCCESS:  { icon: CheckCircle2,  bg: "bg-green-50 border-green-200", text: "text-green-800",  iconColor: "text-green-500" },
+  INFO:     { icon: Info,          bg: "bg-blue-50 border-blue-200 dark:bg-blue-950/50 dark:border-blue-900/60",   text: "text-blue-800 dark:text-blue-200",   iconColor: "text-blue-500" },
+  WARNING:  { icon: AlertTriangle, bg: "bg-amber-50 border-amber-200 dark:bg-amber-950/50 dark:border-amber-900/60", text: "text-amber-800 dark:text-amber-200",  iconColor: "text-amber-500" },
+  CRITICAL: { icon: AlertCircle,   bg: "bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-900/60",     text: "text-red-800 dark:text-red-200",    iconColor: "text-red-500" },
+  SUCCESS:  { icon: CheckCircle2,  bg: "bg-green-50 border-green-200 dark:bg-green-950/50 dark:border-green-900/60", text: "text-green-800 dark:text-green-200",  iconColor: "text-green-500" },
 };
 
 function ToastItem({ toast, onDismiss }: ToastItemProps) {

@@ -56,9 +56,9 @@ interface AgentActivityFeedProps {
 // ─── Icon / colour maps ───────────────────────────────────────────────────────
 
 const SEVERITY_META: Record<string, { icon: React.ElementType; ring: string; bg: string; text: string }> = {
-  CRITICAL: { icon: XCircle,       ring: "ring-red-200",    bg: "bg-red-50",    text: "text-red-700"    },
-  WARNING:  { icon: AlertTriangle, ring: "ring-yellow-200", bg: "bg-yellow-50", text: "text-yellow-700" },
-  INFO:     { icon: Info,          ring: "ring-blue-200",   bg: "bg-blue-50",   text: "text-blue-700"   },
+  CRITICAL: { icon: XCircle,       ring: "ring-red-200 dark:ring-red-900/50",       bg: "bg-red-50 dark:bg-red-950/40",       text: "text-red-700 dark:text-red-300"       },
+  WARNING:  { icon: AlertTriangle, ring: "ring-yellow-200 dark:ring-yellow-900/50", bg: "bg-yellow-50 dark:bg-yellow-950/40", text: "text-yellow-700 dark:text-yellow-300" },
+  INFO:     { icon: Info,          ring: "ring-blue-200 dark:ring-blue-900/50",     bg: "bg-blue-50 dark:bg-blue-950/40",     text: "text-blue-700 dark:text-blue-300"     },
 };
 
 const ACTION_META: Record<string, { icon: React.ElementType; color: string; label: string }> = {
@@ -72,11 +72,11 @@ const ACTION_META: Record<string, { icon: React.ElementType; color: string; labe
 };
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
-  COMPLETED: { color: "text-green-600 bg-green-50",  label: "Done"    },
-  RUNNING:   { color: "text-blue-600 bg-blue-50",    label: "Running" },
-  PENDING:   { color: "text-amber-600 bg-amber-50",  label: "Queued"  },
-  FAILED:    { color: "text-red-600 bg-red-50",      label: "Failed"  },
-  DISMISSED: { color: "text-gray-500 bg-gray-50",    label: "Skipped" },
+  COMPLETED: { color: "text-green-600 bg-green-50 dark:text-green-300 dark:bg-green-950/40",  label: "Done"    },
+  RUNNING:   { color: "text-blue-600 bg-blue-50 dark:text-blue-300 dark:bg-blue-950/40",      label: "Running" },
+  PENDING:   { color: "text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/40",  label: "Queued"  },
+  FAILED:    { color: "text-red-600 bg-red-50 dark:text-red-300 dark:bg-red-950/40",          label: "Failed"  },
+  DISMISSED: { color: "text-gray-500 bg-gray-50 dark:text-gray-400 dark:bg-gray-800/50",      label: "Skipped" },
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -95,9 +95,9 @@ export function AgentActivityFeed({
   const [monitorResult,  setMonitorResult]  = useState<string | null>(null);
   const [dismissing, startDismiss] = useTransition();
 
-  // ── Auto-refresh every 30s ───────────────────────────────────────────────
+  // ── Auto-refresh so the feed + header KPI counts stay live ───────────────
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), 30_000);
+    const id = setInterval(() => router.refresh(), 5_000);
     return () => clearInterval(id);
   }, [router]);
 
@@ -451,10 +451,10 @@ function ActionCard({
                       <span className="text-muted-foreground">−{formatGrams(d.deductedGrams)}</span>
                       <span className={cn(
                         "px-1.5 py-0.5 rounded text-[10px] font-medium",
-                        d.alertLevel === "OK"           ? "bg-green-50 text-green-700"  :
-                        d.alertLevel === "LOW"          ? "bg-yellow-50 text-yellow-700" :
-                        d.alertLevel === "CRITICAL"     ? "bg-orange-50 text-orange-700":
-                        "bg-red-50 text-red-700"
+                        d.alertLevel === "OK"           ? "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"  :
+                        d.alertLevel === "LOW"          ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300" :
+                        d.alertLevel === "CRITICAL"     ? "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300":
+                        "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
                       )}>
                         {d.alertLevel.replace("_", " ")}
                       </span>

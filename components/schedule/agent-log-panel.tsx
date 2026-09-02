@@ -185,7 +185,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
                 </span>
               )}
               {done && !hasError && (
-                <span className="ml-2 text-[10px] font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full">
+                <span className="ml-2 text-[10px] font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full dark:text-green-300 dark:bg-green-950/40">
                   COMPLETE
                 </span>
               )}
@@ -260,7 +260,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
                     {entry.type === "batch_planned" && Array.isArray((entry.data as any)?.shortfalls) && (entry.data as any).shortfalls.length > 0 && (
                       <div className="mt-1 ml-1 flex flex-wrap gap-1">
                         {((entry.data as any).shortfalls as Array<{name:string;shortfallGrams:number}>).map((s, i) => (
-                          <span key={i} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100">
+                          <span key={i} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50">
                             <AlertTriangle className="w-2.5 h-2.5" />
                             {s.name}: {formatGrams(s.shortfallGrams)} shortfall
                           </span>
@@ -270,7 +270,7 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
 
                     {/* AI notes on complete */}
                     {entry.type === "complete" && (entry.data as any)?.aiNotes && (
-                      <div className="mt-1.5 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-blue-700 font-sans text-[11px] leading-relaxed">
+                      <div className="mt-1.5 px-2 py-1.5 bg-blue-50 border border-blue-100 rounded text-blue-700 font-sans text-[11px] leading-relaxed dark:bg-blue-950/40 dark:border-blue-900/50 dark:text-blue-300">
                         <span className="font-semibold">AI reasoning: </span>
                         {(entry.data as any).aiNotes}
                       </div>
@@ -298,13 +298,13 @@ export function AgentLogPanel({ scheduleDate, shiftType, hasExisting }: AgentLog
 
       {/* ── Summary footer after completion ───────────────────────────────── */}
       {done && !hasError && (
-        <div className="border-t border-border px-5 py-3 bg-green-50/50 flex items-center justify-between gap-4 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5 text-green-700">
+        <div className="border-t border-border px-5 py-3 bg-green-50/50 flex items-center justify-between gap-4 text-xs flex-wrap dark:bg-green-950/20">
+          <div className="flex items-center gap-1.5 text-green-700 dark:text-green-300">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span className="font-medium">
               {batchCount} batch{batchCount !== 1 ? "es" : ""} scheduled
             </span>
-            <span className="text-green-600/70">
+            <span className="text-green-600/70 dark:text-green-400/70">
               · Scroll up to review and approve
             </span>
           </div>

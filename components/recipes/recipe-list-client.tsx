@@ -207,7 +207,7 @@ export function RecipeListClient({ initialRecipes, isHeadBaker }: RecipeListClie
                       {recipe.ingredients.slice(0, 4).map((ing) => (
                         <span
                           key={ing.ingredientId}
-                          className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-100"
+                          className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50"
                         >
                           {ing.ingredient?.name ?? "Ingredient"}
                         </span>
@@ -226,7 +226,7 @@ export function RecipeListClient({ initialRecipes, isHeadBaker }: RecipeListClie
                       {recipe.stages.length} stages
                     </span>
                     {hasOven && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 flex items-center gap-0.5">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 flex items-center gap-0.5 dark:bg-amber-950/40 dark:text-amber-300">
                         <Flame className="w-2.5 h-2.5" aria-hidden="true" />
                         Oven
                       </span>

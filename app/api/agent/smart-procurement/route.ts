@@ -99,6 +99,9 @@ export async function POST(req: NextRequest) {
         status: "COMPLETED",
         summary: `Smart procurement analysis: ${parsed.recommendations?.length ?? 0} recommendations`,
         details: parsed,
+        // Set triggeredAt explicitly to when work started so the displayed
+        // duration reflects real elapsed time (and never goes negative).
+        triggeredAt: now,
         completedAt: new Date(),
       },
     });

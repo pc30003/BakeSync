@@ -90,6 +90,8 @@ export async function POST(req: NextRequest) {
         status: "COMPLETED",
         summary: `Analyzed ${wastageLogs.length} wastage entries (${totalWasteKg} kg)`,
         details: parsed,
+        // Explicit triggeredAt so the displayed duration is real, never negative.
+        triggeredAt: now,
         completedAt: new Date(),
       },
     });
