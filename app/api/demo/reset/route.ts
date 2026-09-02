@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const demoPassword = await bcrypt.hash("demo1234", 10);
 
     const bakery = await db.bakery.create({
-      data: { id: "bakery_demo", name: "The Artisan Loaf", timezone: "Europe/London", openingTime: "05:30", closingTime: "18:00", currency: "USD", ovenCount: 3, isOnboarded: true },
+      data: { id: "bakery_demo", name: "The Artisan Loaf", timezone: "Europe/London", openingTime: "06:30", closingTime: "22:00", currency: "USD", ovenCount: 3, isOnboarded: true },
     });
 
     const headBaker = await db.user.create({
