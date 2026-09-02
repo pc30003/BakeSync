@@ -101,7 +101,6 @@ export default async function FloorStaffDashboard() {
           {todaySchedule!.batches.map((batch) => {
             const done = batch.checklist.filter((c) => c.status === "DONE").length;
             const total = batch.checklist.length;
-            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
             const batchComplete = total > 0 && done === total;
 
             return (
@@ -115,20 +114,12 @@ export default async function FloorStaffDashboard() {
                         &nbsp;·&nbsp;{batch.quantity} units
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{pct}%</span>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${getBatchStatusColor(batch.status)}`}>
-                        {batch.status.replace("_", " ")}
-                      </span>
-                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getBatchStatusColor(batch.status)}`}>
+                      {batch.status.replace("_", " ")}
+                    </span>
                   </div>
-                  {/* Progress bar */}
-                  <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${batchComplete ? "bg-green-500" : "bg-primary"}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
+                  {/* Live progress bar + count are rendered inside the checklist
+                      component below so they update instantly as steps are ticked. */}
                 </CardHeader>
 
                 <FloorShiftChecklist

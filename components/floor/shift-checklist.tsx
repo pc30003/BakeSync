@@ -101,14 +101,17 @@ export function FloorShiftChecklist({ scheduleId, batchId, initialItems }: Floor
 
   return (
     <div>
-      {/* Progress bar */}
+      {/* Progress bar (live — updates instantly as steps are ticked) */}
       <div className="px-5 py-3 border-b border-border">
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
           <span>{done}/{total} steps completed</span>
           <span>{pct}%</span>
         </div>
         <div className="h-2 bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div
+            className={cn("h-full rounded-full transition-all duration-500", pct === 100 ? "bg-green-500" : "bg-primary")}
+            style={{ width: `${pct}%` }}
+          />
         </div>
       </div>
 
