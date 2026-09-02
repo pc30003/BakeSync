@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "./card";
+import { CountUp } from "./count-up";
 
 interface StatCardProps {
   title: string;
@@ -25,6 +26,23 @@ const variantIcon: Record<string, string> = {
   success: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
 };
 
+/**
+ * Decide how to render the value:
+ *  - plain number            → count up
+ *  - integer with a % suffix → count up + "%"
+ *  - anything else (e.g. "7.9 kg") → render as-is (don't mangle units/decimals)
+ */
+function renderValue(value: string | number) {
+  if (typeof value === "number") {
+    return <CountUp value={value} />;
+  }
+  const pctMatch = /^(\d+)%$/.exec(value.trim());
+  if (pctMatch) {
+    return <CountUp value={parseInt(pctMatch[1], 10)} suffix="%" />;
+  }
+  return value;
+}
+
 export function StatCard({
   title,
   value,
@@ -35,13 +53,13 @@ export function StatCard({
   className,
 }: StatCardProps) {
   return (
-    <Card className={cn(variantBorder[variant], className)}>
+    <Card className={cn("transition-shadow hover:shadow-md", variantBorder[variant], className)}>
       <CardContent className="pt-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <p className="text-sm text-muted-foreground font-medium">{title}</p>
             <p className="mt-1 text-2xl font-bold text-foreground tracking-tight">
-              {value}
+              {renderValue(value)}
             </p>
             {subtitle && (
               <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>

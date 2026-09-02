@@ -9,6 +9,7 @@ import { BarChart3, TrendingDown, Package, Zap } from "lucide-react";
 import { subDays, startOfDay } from "date-fns";
 import { redirect } from "next/navigation";
 import { AIWastageButton } from "@/components/agent/ai-wastage-button";
+import { StockHealthDonut, TopWasteBars } from "@/components/analytics/analytics-charts";
 
 export const metadata: Metadata = { title: "Analytics" };
 
@@ -87,7 +88,20 @@ export default async function AnalyticsPage() {
   });
   const nameMap = Object.fromEntries(ingredientNames.map((i) => [i.id, i.name]));
 
-  const stockByAlert = Object.fromEntries(stockAlerts.map((s) => [s.alertLevel, s._count]));
+  const stockByAlert = Object.fromEntries(stockAlerts.map((s) => [s.alertLevel, s._count])) as Record<string, number>;
+
+  // ── Chart data ─────────────────────────────────────────────────────────
+  const stockHealthData = [
+    { name: "Healthy",      value: stockByAlert["OK"] ?? 0,           color: "#22C55E" },
+    { name: "Low",          value: stockByAlert["LOW"] ?? 0,          color: "#EAB308" },
+    { name: "Critical",     value: stockByAlert["CRITICAL"] ?? 0,     color: "#F97316" },
+    { name: "Out of stock", value: stockByAlert["OUT_OF_STOCK"] ?? 0, color: "#EF4444" },
+  ];
+
+  const topWasteData = topWastageIngredients.map((w) => ({
+    name:  w.ingredientId ? (nameMap[w.ingredientId] ?? "Unknown") : "Unknown",
+    grams: Number(w._sum.quantityGrams ?? 0),
+  }));
 
   return (
     <div className="space-y-6">
@@ -128,60 +142,32 @@ export default async function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock health */}
+        {/* Stock health donut */}
         <Card>
           <CardHeader>
             <CardTitle>Current Stock Health</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { label: "Healthy",      key: "OK",            color: "bg-green-500" },
-                { label: "Low",          key: "LOW",           color: "bg-yellow-400" },
-                { label: "Critical",     key: "CRITICAL",      color: "bg-orange-500" },
-                { label: "Out of stock", key: "OUT_OF_STOCK",  color: "bg-red-500" },
-              ].map(({ label, key, color }) => {
-                const count = stockByAlert[key] ?? 0;
-                const total = Object.values(stockByAlert).reduce((a, b) => a + b, 0);
-                const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
-
-                return (
-                  <div key={key} className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground w-24 shrink-0">{label}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${label}: ${count} items`}>
-                      <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-sm font-medium w-8 text-right">{count}</span>
-                  </div>
-                );
-              })}
+            <StockHealthDonut data={stockHealthData} />
+            {/* Legend */}
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-2">
+              {stockHealthData.map((s) => (
+                <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                  {s.name} <span className="font-medium text-foreground">{s.value}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        {/* Top wastage ingredients */}
+        {/* Top wasted ingredients bar chart */}
         <Card>
           <CardHeader>
             <CardTitle>Top Wasted Ingredients (30d)</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            {topWastageIngredients.length === 0 ? (
-              <p className="px-5 py-6 text-sm text-muted-foreground text-center">
-                No wastage recorded in the last 30 days.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border" role="list">
-                {topWastageIngredients.map((w, i) => (
-                  <li key={w.ingredientId ?? i} className="flex items-center justify-between px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
-                      <p className="text-sm">{w.ingredientId ? (nameMap[w.ingredientId] ?? "Unknown") : "Unknown"}</p>
-                    </div>
-                    <p className="text-sm font-medium">{formatGrams(Number(w._sum.quantityGrams ?? 0))}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <CardContent>
+            <TopWasteBars data={topWasteData} />
           </CardContent>
         </Card>
       </div>
