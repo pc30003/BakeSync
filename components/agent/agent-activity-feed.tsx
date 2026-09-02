@@ -217,7 +217,7 @@ export function AgentActivityFeed({
 
       {/* Monitor result banner */}
       {monitorResult && (
-        <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm flex items-start gap-2">
+        <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm flex items-start gap-2 dark:bg-green-950/30 dark:border-green-900/50 dark:text-green-200">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{monitorResult}</span>
         </div>
@@ -380,7 +380,9 @@ function ActionCard({
   // Pretty-format duration
   let duration = "";
   if (action.completedAt && action.triggeredAt) {
-    const ms = new Date(action.completedAt).getTime() - new Date(action.triggeredAt).getTime();
+    // Clamp to >= 0: DB timestamp rounding can make completedAt land a hair
+    // before triggeredAt, which would otherwise render as a bogus "-1ms".
+    const ms = Math.max(0, new Date(action.completedAt).getTime() - new Date(action.triggeredAt).getTime());
     duration = ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
   }
 
