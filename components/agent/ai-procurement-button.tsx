@@ -29,8 +29,10 @@ export function AIProcurementButton() {
   const [result, setResult] = useState<ProcurementAnalysis | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Per-row order state, keyed by the recommendation index.
+  // "ordered"  = fresh order placed, stock increased.
+  // "already"  = already ordered recently, stock already restored (no double-add).
   const [orderingIdx, setOrderingIdx] = useState<number | null>(null);
-  const [orderedIdx, setOrderedIdx] = useState<Set<number>>(new Set());
+  const [orderedIdx, setOrderedIdx] = useState<Map<number, "ordered" | "already">>(new Map());
 
   function handleAnalyze() {
     setError(null);
@@ -40,7 +42,7 @@ export function AIProcurementButton() {
         const json = await res.json();
         if (res.ok) {
           setResult(json.data);
-          setOrderedIdx(new Set()); // reset order state for a fresh analysis
+          setOrderedIdx(new Map()); // reset order state for a fresh analysis
         } else {
           setError(json.error ?? "Analysis failed");
         }
@@ -62,11 +64,15 @@ export function AIProcurementButton() {
           quantityKg:     rec.suggestedQuantityKg,
         }),
       });
-      // 200 = ordered now. 409 = already ordered / already well-stocked —
-      // either way the stock is restored, so mark the row as done (no double-restock).
-      if (res.ok || res.status === 409) {
-        setOrderedIdx((prev) => new Set(prev).add(idx));
+      // 200 = fresh order, stock increased. 409 = already ordered recently, so
+      // stock is already restored (we must NOT re-add). Show distinct labels so
+      // the user isn't confused when the stock number doesn't move on a 409.
+      if (res.ok) {
+        setOrderedIdx((prev) => new Map(prev).set(idx, "ordered"));
         router.refresh(); // stock levels + KPI counts update live
+      } else if (res.status === 409) {
+        setOrderedIdx((prev) => new Map(prev).set(idx, "already"));
+        router.refresh();
       }
     } catch {
       // silent — button re-enables so the user can retry
@@ -126,7 +132,8 @@ export function AIProcurementButton() {
             <ul className="divide-y divide-border" role="list">
               {result.recommendations.map((rec, i) => {
                 const isOrdering = orderingIdx === i;
-                const isOrdered  = orderedIdx.has(i);
+                const orderState = orderedIdx.get(i); // "ordered" | "already" | undefined
+                const isOrdered  = orderState !== undefined;
                 const canOrder   = !!rec.ingredient && Number(rec.suggestedQuantityKg) > 0;
                 return (
                   <li key={i} className="py-3 flex items-start justify-between gap-3">
@@ -148,7 +155,7 @@ export function AIProcurementButton() {
                     {isOrdered ? (
                       <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400 text-xs font-medium shrink-0 pt-0.5">
                         <CheckCircle className="w-4 h-4" />
-                        Ordered
+                        {orderState === "already" ? "Already stocked" : "Ordered"}
                       </div>
                     ) : canOrder ? (
                       <Button
