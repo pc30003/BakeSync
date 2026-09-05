@@ -81,13 +81,27 @@ export function AIProcurementButton() {
     u === "MEDIUM"   ? "info" :
     "outline";
 
+  // The AI ranks ORDER PRIORITY (demand-aware), which is distinct from the
+  // mechanical stock alert level shown on Inventory. We relabel it so the two
+  // never look contradictory (e.g. AI "order soon" vs Inventory "OK").
+  const priorityLabel = (u: string) =>
+    u === "CRITICAL" ? "Urgent" :
+    u === "HIGH"     ? "High" :
+    u === "MEDIUM"   ? "Medium" :
+    "Low";
+
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4 text-primary" />
-            <CardTitle>AI Procurement Intelligence</CardTitle>
+            <div>
+              <CardTitle>AI Procurement Intelligence</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Order priority is demand-aware — it can flag items to reorder before stock hits its alert level.
+              </p>
+            </div>
           </div>
           <Button size="sm" variant="primary" loading={isPending} onClick={handleAnalyze}>
             {result ? "Refresh" : "Analyze supply needs"}
@@ -120,7 +134,9 @@ export function AIProcurementButton() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <ShoppingCart className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="text-sm font-medium">{rec.ingredient}</span>
-                        <Badge variant={urgencyVariant(rec.urgency) as any}>{rec.urgency}</Badge>
+                        <Badge variant={urgencyVariant(rec.urgency) as any}>
+                          Priority: {priorityLabel(rec.urgency)}
+                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{rec.reason}</p>
                       <p className="text-xs text-muted-foreground">
