@@ -100,7 +100,7 @@ export default async function InventoryPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Stock Level</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden lg:table-cell">Cost/kg</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Supplier</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">Last restocked</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Last restocked</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 </tr>
               </thead>
@@ -125,7 +125,7 @@ export default async function InventoryPage() {
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs">
                       {ing.supplier?.name ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 text-muted-foreground hidden md:table-cell text-xs whitespace-nowrap">
                       {lastRestocked.has(ing.id)
                         ? `${formatDistanceToNow(lastRestocked.get(ing.id)!, { addSuffix: true })}`
                         : "—"}
