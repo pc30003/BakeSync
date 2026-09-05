@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are BakeSync's procurement AI. Analyze stock levels, upcoming demand, and supplier lead times to recommend what to order NOW to avoid disruption. Be proactive — flag things that will run out BEFORE they hit critical. Return JSON: { "summary": "1-2 sentence overview", "recommendations": [{ "ingredient": "name", "urgency": "CRITICAL|HIGH|MEDIUM|LOW", "reason": "why order now", "suggestedQuantityKg": number, "estimatedCost": number, "supplier": "name", "orderBy": "date string — when to order by to arrive on time" }], "riskAlert": "biggest supply risk in next 7 days" }`,
+          content: `You are BakeSync's procurement AI. Analyze stock levels, upcoming demand, and supplier lead times to recommend what to order NOW to avoid disruption. Be proactive — flag things that will run out BEFORE they hit critical. Return JSON: { "summary": "1-2 sentence overview", "recommendations": [{ "ingredient": "name", "urgency": "CRITICAL|HIGH|MEDIUM|LOW", "reason": "why order now", "suggestedQuantityKg": number, "estimatedCost": number, "supplier": "name", "leadTimeDays": number — the supplier's delivery lead time in days, copied from the provided context }], "riskAlert": "biggest supply risk in next 7 days" }. Do NOT invent calendar dates.`,
         },
         {
           role: "user",

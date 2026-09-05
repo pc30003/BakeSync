@@ -14,7 +14,8 @@ interface ProcurementRec {
   suggestedQuantityKg: number;
   estimatedCost: number;
   supplier: string;
-  orderBy: string;
+  leadTimeDays?: number;
+  orderBy?: string; // legacy field — no longer displayed
 }
 
 interface ProcurementAnalysis {
@@ -147,7 +148,10 @@ export function AIProcurementButton() {
                       </div>
                       <p className="text-xs text-muted-foreground">{rec.reason}</p>
                       <p className="text-xs text-muted-foreground">
-                        Order {rec.suggestedQuantityKg} kg from {rec.supplier} · Est. ${rec.estimatedCost?.toFixed(2)} · Order by: {rec.orderBy}
+                        Order {rec.suggestedQuantityKg} kg from {rec.supplier} · Est. ${rec.estimatedCost?.toFixed(2)}
+                        {typeof rec.leadTimeDays === "number" && rec.leadTimeDays > 0 && (
+                          <> · Arrives in ~{rec.leadTimeDays} day{rec.leadTimeDays !== 1 ? "s" : ""}</>
+                        )}
                       </p>
                     </div>
 
