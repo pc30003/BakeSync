@@ -7,6 +7,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { StockLevelBar } from "@/components/ui/stock-level-bar";
 import { formatGrams, formatCurrency } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import { Package } from "lucide-react";
 
 export const metadata: Metadata = { title: "Inventory" };
@@ -22,11 +23,28 @@ const alertVariant: Record<string, string> = {
 
 export default async function InventoryPage() {
   const session     = await auth();
+  const bakeryId    = session!.user.bakeryId;
   const ingredients = await db.ingredient.findMany({
-    where:   { bakeryId: session!.user.bakeryId, isTracked: true },
+    where:   { bakeryId, isTracked: true },
     include: { supplier: { select: { name: true } } },
     orderBy: [{ alertLevel: "asc" }, { name: "asc" }],
   });
+
+  // "Last restocked" = the most recent approved procurement for each ingredient.
+  // Both the manual approve flow and the AI order flow mark a recommendation
+  // approved, so this reflects real restocks. Ingredients never restocked simply
+  // show a dash.
+  const approvedRecs = await db.procurementRecommendation.findMany({
+    where:   { bakeryId, approvedAt: { not: null } },
+    select:  { ingredientId: true, approvedAt: true },
+    orderBy: { approvedAt: "desc" },
+  });
+  const lastRestocked = new Map<string, Date>();
+  for (const rec of approvedRecs) {
+    if (rec.approvedAt && !lastRestocked.has(rec.ingredientId)) {
+      lastRestocked.set(rec.ingredientId, rec.approvedAt);
+    }
+  }
 
   const byAlert = {
     OUT_OF_STOCK: ingredients.filter((i) => i.alertLevel === "OUT_OF_STOCK"),
@@ -82,6 +100,7 @@ export default async function InventoryPage() {
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Stock Level</th>
                   <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden lg:table-cell">Cost/kg</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Supplier</th>
+                  <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">Last restocked</th>
                   <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
                 </tr>
               </thead>
@@ -105,6 +124,11 @@ export default async function InventoryPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs">
                       {ing.supplier?.name ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell text-xs whitespace-nowrap">
+                      {lastRestocked.has(ing.id)
+                        ? `${formatDistanceToNow(lastRestocked.get(ing.id)!, { addSuffix: true })}`
+                        : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={alertVariant[ing.alertLevel] as any}>
