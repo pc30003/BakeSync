@@ -55,29 +55,43 @@ export async function POST(req: NextRequest) {
 
     if (!ingredient) return notFound("Ingredient");
 
-    // ── Idempotency guard ────────────────────────────────────────────────
-    // Prevent double-restock: if this exact ingredient was already ordered via
-    // the AI panel in the last 10 minutes, refuse. Guards against repeat clicks
-    // across a "Refresh", multiple tabs, or a double-submit. We match on the
-    // action summary (which embeds the ingredient name) so this stays portable
-    // and never depends on JSON-path query support.
-    const recentOrder = await db.agentAction.findFirst({
+    const currentStock = Number(ingredient.stockGrams);
+
+    // ── Idempotency guard (state-based, not just time-based) ──────────────
+    // We only want to block ACCIDENTAL duplicates (double-click, refresh-and-
+    // reclick, two tabs) — NOT a legitimate reorder after the stock was used
+    // up again (e.g. logged wastage or checklist deductions since the last
+    // order). So: find the most recent order for this ingredient in the last
+    // 10 minutes and read the stock level it left behind. If the current stock
+    // is still at/above that level, nothing has been consumed since → it's a
+    // duplicate, block it. If stock has dropped below that level, real usage
+    // happened → allow the reorder.
+    const recentActions = await db.agentAction.findMany({
       where: {
         bakeryId,
         type:        "PROCUREMENT_RECOMMENDATION",
         completedAt: { gte: new Date(Date.now() - 10 * 60 * 1000) },
-        summary:     { contains: `${ingredient.name} — stock restored` },
       },
+      orderBy: { completedAt: "desc" },
+      take: 20,
     });
+    // Match on the stable details.ingredientId (not the summary text), filtered
+    // in JS so we don't depend on JSON-path query support. Only THIS route's
+    // order actions carry a details.ingredientId; the analysis actions don't.
+    const recentOrder = recentActions.find(
+      (a) => (a.details as { ingredientId?: string } | null)?.ingredientId === ingredient.id
+    );
     if (recentOrder) {
-      return error(`${ingredient.name} was already ordered in the last few minutes — stock is restored.`, 409);
+      const lastLeftStock = Number(
+        (recentOrder.details as { newStockGrams?: number })?.newStockGrams ?? 0
+      );
+      // Nothing consumed since the last order → true duplicate, block it.
+      if (currentStock >= lastLeftStock) {
+        return error(`${ingredient.name} was already ordered in the last few minutes — stock is restored.`, 409);
+      }
+      // else: stock dropped since (wastage/production) → allow the reorder.
     }
-    // NOTE: we intentionally do NOT block based on current stock level. The AI
-    // panel is for PROACTIVE ordering — restocking before an ingredient runs
-    // low — so a healthy stock level is a valid reason to order more. The
-    // recent-order guard above is what prevents accidental double-restock.
 
-    const currentStock = Number(ingredient.stockGrams);
     const newStock     = currentStock + orderGrams;
     const alertLevel   = computeAlertLevel(
       newStock,
