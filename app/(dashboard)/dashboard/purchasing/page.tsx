@@ -20,7 +20,8 @@ export default async function PurchasingDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now = new Date();
 
-  const [pendingRecs, criticalRecs, suppliers, recentApprovals] = await Promise.all([
+  const [bakery, pendingRecs, criticalRecs, suppliers, recentApprovals] = await Promise.all([
+    db.bakery.findUnique({ where: { id: bakeryId }, select: { currency: true } }),
     // All pending (unapproved, undismissed) recommendations
     db.procurementRecommendation.findMany({
       where: { bakeryId, approvedAt: null, dismissedAt: null },
@@ -44,6 +45,7 @@ export default async function PurchasingDashboard() {
       },
     }),
   ]);
+  const currency = bakery?.currency ?? "USD";
 
   // Urgency is a string column so DB sort is alphabetical (wrong).
   // Rank CRITICAL → HIGH → MEDIUM → LOW, newest first within a tier.
@@ -139,7 +141,7 @@ export default async function PurchasingDashboard() {
                         &nbsp;·&nbsp;
                         Lead time: {rec.supplier.leadTimeDays}d
                         {rec.estimatedCost && (
-                          <>&nbsp;·&nbsp;Est. cost: {formatCurrency(Number(rec.estimatedCost))}</>
+                          <>&nbsp;·&nbsp;Est. cost: {formatCurrency(Number(rec.estimatedCost), currency)}</>
                         )}
                       </p>
                     )}

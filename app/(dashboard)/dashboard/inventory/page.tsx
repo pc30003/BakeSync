@@ -24,11 +24,15 @@ const alertVariant: Record<string, string> = {
 export default async function InventoryPage() {
   const session     = await auth();
   const bakeryId    = session!.user.bakeryId;
-  const ingredients = await db.ingredient.findMany({
-    where:   { bakeryId, isTracked: true },
-    include: { supplier: { select: { name: true } } },
-    orderBy: [{ alertLevel: "asc" }, { name: "asc" }],
-  });
+  const [bakery, ingredients] = await Promise.all([
+    db.bakery.findUnique({ where: { id: bakeryId }, select: { currency: true } }),
+    db.ingredient.findMany({
+      where:   { bakeryId, isTracked: true },
+      include: { supplier: { select: { name: true } } },
+      orderBy: [{ alertLevel: "asc" }, { name: "asc" }],
+    }),
+  ]);
+  const currency = bakery?.currency ?? "USD";
 
   // "Last restocked" = the most recent approved procurement for each ingredient.
   // Both the manual approve flow and the AI order flow mark a recommendation
@@ -120,7 +124,7 @@ export default async function InventoryPage() {
                       />
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground hidden lg:table-cell">
-                      {formatCurrency(Number(ing.costPerKg))}/kg
+                      {formatCurrency(Number(ing.costPerKg), currency)}/kg
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell text-xs">
                       {ing.supplier?.name ?? "—"}

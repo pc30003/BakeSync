@@ -33,12 +33,17 @@ const channelLabel: Record<OrderChannel, string> = {
 
 export default async function OrdersPage() {
   const session = await auth();
-  const orders  = await db.order.findMany({
-    where:   { bakeryId: session!.user.bakeryId },
-    include: { lineItems: true },
-    orderBy: { fulfilmentDate: "asc" },
-    take: 50,
-  });
+  const bakeryId = session!.user.bakeryId;
+  const [bakery, orders] = await Promise.all([
+    db.bakery.findUnique({ where: { id: bakeryId }, select: { currency: true } }),
+    db.order.findMany({
+      where:   { bakeryId },
+      include: { lineItems: true },
+      orderBy: { fulfilmentDate: "asc" },
+      take: 50,
+    }),
+  ]);
+  const currency = bakery?.currency ?? "USD";
 
   // Build CSV export data
   const csvRows = orders.map((o) => [
@@ -103,7 +108,7 @@ export default async function OrdersPage() {
                         {formatDate(order.fulfilmentDate)}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {formatCurrency(Number(order.totalValue))}
+                        {formatCurrency(Number(order.totalValue), currency)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={statusVariant[order.status as OrderStatus] as any}>
