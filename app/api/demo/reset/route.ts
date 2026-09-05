@@ -174,7 +174,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Orders
+    // Orders — stagger createdAt so the "Received" column reads authentically.
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000);
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(8, 0, 0, 0);
@@ -187,6 +188,7 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, channel: OrderChannel.WHOLESALE, status: OrderStatus.CONFIRMED,
         customerName: "Bloom & Bean Café", customerEmail: "orders@bloomandbean.com",
+        createdAt: hoursAgo(26),
         fulfilmentDate: tomorrow, totalValue: 96.00, notes: "Weekly standing order — delivery by 07:30",
         lineItems: { create: [
           { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 16)", quantity: 3, unitPrice: 18.00 },
@@ -199,6 +201,7 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.PENDING,
         customerName: "Sophie Williams", customerEmail: "sophie.w@gmail.com",
+        createdAt: hoursAgo(2),
         fulfilmentDate: tomorrow, totalValue: 25.00,
         lineItems: { create: [
           { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 2, unitPrice: 8.00 },
@@ -211,6 +214,7 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, channel: OrderChannel.MANUAL, status: OrderStatus.CONFIRMED,
         customerName: "London Fields Hotel", customerEmail: "events@londonfieldshotel.co.uk",
+        createdAt: hoursAgo(48),
         fulfilmentDate: dayAfter, totalValue: 180.00, notes: "Conference dessert platter — 40 pax",
         lineItems: { create: [
           { productId: "prod_brownie", productName: "Dark Chocolate Brownies", quantity: 32, unitPrice: 2.50 },
@@ -223,6 +227,7 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, channel: OrderChannel.ECOMMERCE, status: OrderStatus.CONFIRMED,
         customerName: "David & Maria Chen", customerEmail: "david.chen@proton.me",
+        createdAt: hoursAgo(5),
         fulfilmentDate: dayAfter, totalValue: 32.00, notes: "Birthday celebration",
         lineItems: { create: [
           { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 16)", quantity: 1, unitPrice: 18.00 },
@@ -235,6 +240,7 @@ export async function POST(req: NextRequest) {
       data: {
         bakeryId: bakery.id, channel: OrderChannel.POS, status: OrderStatus.IN_PRODUCTION,
         customerName: "Walk-in (counter)", customerEmail: null,
+        createdAt: hoursAgo(0.4),
         fulfilmentDate: new Date(), totalValue: 12.50, notes: "Collected at counter",
         lineItems: { create: [
           { productId: "prod_brownie", productName: "Dark Chocolate Brownies (box of 4)", quantity: 1, unitPrice: 8.00 },
