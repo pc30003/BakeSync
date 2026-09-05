@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatGrams } from "@/lib/utils";
 import { WastageLogForm } from "@/components/floor/wastage-log-form";
 import { ExportCsvButton } from "@/components/ui/export-csv-button";
-import { subDays, startOfDay } from "date-fns";
+import { subDays, startOfDay, formatDistanceToNow } from "date-fns";
 
 export const metadata: Metadata = { title: "Log Wastage" };
 
@@ -87,7 +87,7 @@ export default async function WastagePage() {
                         {log.ingredient?.name ?? log.productName ?? "Unknown"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {log.reason} · {formatDate(log.shiftDate)} · by {log.loggedBy.name}
+                        {log.reason} · {formatDistanceToNow(log.shiftDate, { addSuffix: true })} · by {log.loggedBy.name}
                       </p>
                     </div>
                     <p className="text-sm font-medium shrink-0">
