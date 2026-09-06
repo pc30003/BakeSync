@@ -348,28 +348,43 @@ async function runMonitorForBakery(bakeryId: string) {
   ]);
   const outstandingIssues = openShortfallAlerts + openCriticalAlerts;
 
-  // ── 7. LOG THIS RUN ───────────────────────────────────────────────────────
+  // ── 7. LOG THIS RUN (only when it actually did something) ─────────────────
   const total = stockAlerts + expiryAlerts + procurements + demandGaps + healed;
 
-  await db.agentAction.create({
-    data: {
-      bakeryId,
-      type:    "FLAG_SHORTFALL",
-      status:  "COMPLETED",
-      summary: total > 0
-        ? `Monitor: ${total} action(s) — ${summary.slice(0, 2).join("; ")}${summary.length > 2 ? "…" : ""}`
-        : "Monitor ran — all systems healthy",
-      details: {
-        ranAt: now.toISOString(),
-        stockAlerts, expiryAlerts, demandGaps,
-        procurements, healed, healed_failed,
-        summary,
+  // Skip logging pure no-op "all healthy" runs. The monitor may run very often
+  // (cron + manual clicks); logging an identical row every time floods the
+  // activity feed and buries the meaningful events. We only record a run when
+  // it produced real actions — the feed then reads as a trail of decisions,
+  // not heartbeat noise. (The live "Run monitor" button still reports current
+  // state to the user regardless.)
+  if (total > 0) {
+    // Build a readable, never-blank one-line summary of what happened.
+    const parts: string[] = [];
+    if (stockAlerts)  parts.push(`${stockAlerts} stock alert${stockAlerts !== 1 ? "s" : ""}`);
+    if (procurements) parts.push(`${procurements} reorder${procurements !== 1 ? "s" : ""} raised`);
+    if (expiryAlerts) parts.push(`${expiryAlerts} expiry alert${expiryAlerts !== 1 ? "s" : ""}`);
+    if (demandGaps)   parts.push(`${demandGaps} demand gap${demandGaps !== 1 ? "s" : ""}`);
+    if (healed)       parts.push(`${healed} self-healed`);
+    const headline = parts.join(" · ") || `${total} action${total !== 1 ? "s" : ""}`;
+
+    await db.agentAction.create({
+      data: {
+        bakeryId,
+        type:    "FLAG_SHORTFALL",
+        status:  "COMPLETED",
+        summary: `Monitor flagged: ${headline}`,
+        details: {
+          ranAt: now.toISOString(),
+          stockAlerts, expiryAlerts, demandGaps,
+          procurements, healed, healed_failed,
+          summary,
+        },
+        requiresApproval: false,
+        triggeredAt:      now,
+        completedAt:      new Date(),
       },
-      requiresApproval: false,
-      triggeredAt:      now,
-      completedAt:      new Date(),
-    },
-  });
+    });
+  }
 
   return {
     bakeryId, ranAt: now.toISOString(),

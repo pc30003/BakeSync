@@ -19,6 +19,7 @@ import {
   Loader2, Package, CalendarDays, Zap, ShoppingCart, X,
 } from "lucide-react";
 import { cn, formatDateTime, formatGrams } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -171,7 +172,16 @@ export function AgentActivityFeed({
     ...actions.map(a => ({ kind: "action" as const, ts: new Date(a.triggeredAt).getTime(), data: a })),
   ].sort((a, b) => b.ts - a.ts);
 
+  // Hide legacy no-op monitor rows so the feed stays high-signal even if the
+  // database still holds old "all healthy" / blank-summary heartbeat entries
+  // from before the monitor stopped logging them. (New runs never log no-ops.)
+  const isNoopMonitor = (a: AgentActionRow) => {
+    const s = (a.summary ?? "").trim();
+    return /all systems healthy/i.test(s) || /action\(s\)\s*—\s*$/.test(s);
+  };
+
   const filtered = timeline.filter(item => {
+    if (item.kind === "action" && isNoopMonitor(item.data)) return false;
     if (tab === "alerts")  return item.kind === "alert";
     if (tab === "actions") return item.kind === "action";
     return true;
@@ -357,8 +367,8 @@ function AlertCard({
           <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
             {alert.message}
           </p>
-          <p className="mt-1.5 text-[10px] text-muted-foreground/70">
-            {formatDateTime(alert.createdAt)}
+          <p className="mt-1.5 text-[10px] text-muted-foreground/70" title={formatDateTime(alert.createdAt)}>
+            {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
             {alert.relatedEntityType && ` · ${alert.relatedEntityType}`}
           </p>
         </div>
@@ -422,8 +432,8 @@ function ActionCard({
           {action.errorMessage && (
             <p className="mt-1 text-xs text-destructive">{action.errorMessage}</p>
           )}
-          <p className="mt-1 text-[10px] text-muted-foreground/70">
-            {formatDateTime(action.triggeredAt)}
+          <p className="mt-1 text-[10px] text-muted-foreground/70" title={formatDateTime(action.triggeredAt)}>
+            {formatDistanceToNow(new Date(action.triggeredAt), { addSuffix: true })}
           </p>
         </div>
 
