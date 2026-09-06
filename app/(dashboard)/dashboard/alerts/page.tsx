@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AgentActivityFeed } from "@/components/agent/agent-activity-feed";
-import { StatCard } from "@/components/ui/stat-card";
+import { AgentCommandCenter } from "@/components/agent/agent-command-center";
 import { formatDate } from "@/lib/utils";
 import {
-  Bot, AlertTriangle, Zap,
+  Bot,
 } from "lucide-react";
 
 
@@ -94,37 +94,13 @@ export default async function AgentActivityPage() {
         </div>
       </div>
 
-      {/* ── KPI row ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Critical alerts"
-          value={criticalAlerts}
-          subtitle={criticalAlerts > 0 ? "require immediate action" : "none open"}
-          icon={<AlertTriangle className="w-5 h-5" />}
-          variant={criticalAlerts > 0 ? "danger" : "default"}
-        />
-        <StatCard
-          title="Warnings"
-          value={warningAlerts}
-          subtitle={warningAlerts > 0 ? "review soon" : "none open"}
-          icon={<AlertTriangle className="w-5 h-5" />}
-          variant={warningAlerts > 0 ? "warning" : "default"}
-        />
-        <StatCard
-          title="Actions today"
-          value={actionsToday}
-          subtitle="completed autonomously"
-          icon={<Zap className="w-5 h-5" />}
-          variant="success"
-        />
-        <StatCard
-          title="Failed actions"
-          value={failedActions}
-          subtitle={failedActions > 0 ? "need investigation" : "none — running clean"}
-          icon={<Bot className="w-5 h-5" />}
-          variant={failedActions > 0 ? "danger" : "default"}
-        />
-      </div>
+      {/* ── Command center hero ─────────────────────────────────────────── */}
+      <AgentCommandCenter
+        critical={criticalAlerts}
+        warnings={warningAlerts}
+        actionsToday={actionsToday}
+        failed={failedActions}
+      />
 
       {/* ── How it works (collapsed callout for judges) ──────────────────── */}
       <AgentExplainer />
