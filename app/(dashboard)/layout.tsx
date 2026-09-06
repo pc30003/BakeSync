@@ -14,15 +14,16 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Fetch bakery operating hours for the live shift clock
+  // Fetch bakery details for the shell (shift clock hours + bakery name)
   const bakery = await db.bakery.findUnique({
     where:  { id: session.user.bakeryId },
-    select: { openingTime: true, closingTime: true },
+    select: { name: true, openingTime: true, closingTime: true },
   });
 
   return (
     <AppShell
       user={session.user}
+      bakeryName={bakery?.name}
       openingTime={bakery?.openingTime ?? "05:00"}
       closingTime={bakery?.closingTime ?? "20:00"}
     >

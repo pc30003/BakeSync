@@ -15,11 +15,12 @@ const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 interface AppShellProps {
   user:        SessionUser;
   children:    React.ReactNode;
+  bakeryName?: string;
   openingTime?: string;
   closingTime?: string;
 }
 
-export function AppShell({ user, children, openingTime = "05:00", closingTime = "20:00" }: AppShellProps) {
+export function AppShell({ user, children, bakeryName, openingTime = "05:00", closingTime = "20:00" }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -32,6 +33,7 @@ export function AppShell({ user, children, openingTime = "05:00", closingTime = 
         {/* Sidebar */}
         <Sidebar
           user={user}
+          bakeryName={bakeryName}
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
         />

@@ -21,11 +21,12 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 interface SidebarProps {
   user: SessionUser;
+  bakeryName?: string;
   open: boolean;
   onClose: () => void;
 }
 
-export function Sidebar({ user, open, onClose }: SidebarProps) {
+export function Sidebar({ user, bakeryName, open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const sections = getNavForRole(user.role);
 
@@ -53,6 +54,7 @@ export function Sidebar({ user, open, onClose }: SidebarProps) {
       <aside className="hidden lg:flex lg:fixed lg:inset-y-0 lg:left-0 lg:w-64 lg:flex-col z-30 border-r border-border bg-card">
         <SidebarContent
           user={user}
+          bakeryName={bakeryName}
           sections={sections}
           pathname={pathname}
           badgeCounts={badgeCounts}
@@ -72,6 +74,7 @@ export function Sidebar({ user, open, onClose }: SidebarProps) {
       >
         <SidebarContent
           user={user}
+          bakeryName={bakeryName}
           sections={sections}
           pathname={pathname}
           badgeCounts={badgeCounts}
@@ -85,6 +88,7 @@ export function Sidebar({ user, open, onClose }: SidebarProps) {
 
 interface SidebarContentProps {
   user: SessionUser;
+  bakeryName?: string;
   sections: ReturnType<typeof getNavForRole>;
   pathname: string;
   badgeCounts: Record<string, number>;
@@ -93,7 +97,7 @@ interface SidebarContentProps {
 }
 
 function SidebarContent({
-  user, sections, pathname, badgeCounts, onClose, showClose,
+  user, bakeryName, sections, pathname, badgeCounts, onClose, showClose,
 }: SidebarContentProps) {
   return (
     <div className="flex flex-col h-full">
@@ -103,9 +107,11 @@ function SidebarContent({
         <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2.5 min-w-0">
           <BakeSyncLogo variant="icon" size="sm" className="rounded-lg shrink-0" />
           <div className="min-w-0">
-            <p className="font-bold text-[#4A2010] dark:text-amber-100 text-sm leading-tight">BakeSync</p>
+            <p className="font-bold text-[#4A2010] dark:text-amber-100 text-sm leading-tight truncate">
+              {bakeryName ?? "BakeSync"}
+            </p>
             <p className="text-[10px] text-[#D97706] font-medium leading-tight truncate">
-              {getRoleLabel(user.role)}
+              {bakeryName ? "BakeSync" : getRoleLabel(user.role)}
             </p>
           </div>
         </Link>
