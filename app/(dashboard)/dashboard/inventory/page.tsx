@@ -35,19 +35,42 @@ export default async function InventoryPage() {
   const currency = bakery?.currency ?? "USD";
 
   // "Last restocked" = the most recent approved procurement for each ingredient.
-  // Both the manual approve flow and the AI order flow mark a recommendation
-  // approved, so this reflects real restocks. Ingredients never restocked simply
-  // show a dash.
-  const approvedRecs = await db.procurementRecommendation.findMany({
-    where:   { bakeryId, approvedAt: { not: null } },
-    select:  { ingredientId: true, approvedAt: true },
-    orderBy: { approvedAt: "desc" },
-  });
+  // "Last restocked" must reflect EVERY restock path:
+  //   a) manual approval        → procurementRecommendation.approvedAt
+  //   b) AI "Order now"         → logs an AgentAction (PROCUREMENT_RECOMMENDATION)
+  //                               with details.ingredientId + completedAt, and
+  //                               only stamps approvedAt when a PENDING rec
+  //                               existed — so the rec table alone can miss it.
+  // We merge both sources and keep the most recent per ingredient. Ingredients
+  // never restocked show a dash.
   const lastRestocked = new Map<string, Date>();
-  for (const rec of approvedRecs) {
-    if (rec.approvedAt && !lastRestocked.has(rec.ingredientId)) {
-      lastRestocked.set(rec.ingredientId, rec.approvedAt);
+  const noteRestock = (ingredientId: string | null | undefined, when: Date | null | undefined) => {
+    if (!ingredientId || !when) return;
+    const prev = lastRestocked.get(ingredientId);
+    if (!prev || when.getTime() > prev.getTime()) {
+      lastRestocked.set(ingredientId, when);
     }
+  };
+
+  const [approvedRecs, orderActions] = await Promise.all([
+    db.procurementRecommendation.findMany({
+      where:   { bakeryId, approvedAt: { not: null } },
+      select:  { ingredientId: true, approvedAt: true },
+      orderBy: { approvedAt: "desc" },
+    }),
+    db.agentAction.findMany({
+      where:   { bakeryId, type: "PROCUREMENT_RECOMMENDATION", completedAt: { not: null } },
+      select:  { details: true, completedAt: true },
+      orderBy: { completedAt: "desc" },
+    }),
+  ]);
+
+  for (const rec of approvedRecs) {
+    noteRestock(rec.ingredientId, rec.approvedAt);
+  }
+  for (const action of orderActions) {
+    const ingredientId = (action.details as { ingredientId?: string } | null)?.ingredientId ?? null;
+    noteRestock(ingredientId, action.completedAt);
   }
 
   const byAlert = {
