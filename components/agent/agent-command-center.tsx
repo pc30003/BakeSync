@@ -40,6 +40,7 @@ export function AgentCommandCenter({
 
   // Derive the overall system state from the counts.
   const state = deriveState(critical, warnings, failed);
+  const StateIcon = state.icon;
 
   return (
     <div
@@ -55,7 +56,7 @@ export function AgentCommandCenter({
         {/* ── Left: status headline ─────────────────────────────────────── */}
         <div className="flex items-start gap-4 min-w-0">
           <div className={cn("shrink-0 w-12 h-12 rounded-xl flex items-center justify-center", state.iconWrap)}>
-            <state.icon className="w-6 h-6" aria-hidden="true" />
+            <StateIcon className="w-6 h-6" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
