@@ -137,11 +137,17 @@ export function AgentActivityFeed({
       const r = json.data?.results?.[0];
       if (r) {
         const items: string[] = Array.isArray(r.summary) ? r.summary : [];
+        const outstanding = Number(r.outstandingIssues ?? 0);
         if (items.length > 0) {
-          // Show the actual findings, one per line — never a bare "found N:".
+          // New findings this run — list them.
           setMonitorResult(
             `Monitor found ${items.length} thing${items.length !== 1 ? "s" : ""} to act on:\n` +
             items.map((s) => `• ${s}`).join("\n")
+          );
+        } else if (outstanding > 0) {
+          // Nothing NEW, but issues are still open — don't claim "all clear".
+          setMonitorResult(
+            `Monitor ran — no new issues, but ${outstanding} alert${outstanding !== 1 ? "s" : ""} still need attention. Review the list below.`
           );
         } else {
           setMonitorResult("Monitor ran — everything's on track. No new issues. ✓");

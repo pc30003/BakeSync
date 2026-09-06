@@ -331,7 +331,24 @@ async function runMonitorForBakery(bakeryId: string) {
     });
   }
 
-  // ── 6. LOG THIS RUN ───────────────────────────────────────────────────────
+  // ── 6. OUTSTANDING STATE: unresolved issues that already exist ────────────
+  // The monitor dedups — it won't re-create an alert that's already open. So
+  // "no NEW issues" doesn't mean "all clear". Report what's still outstanding
+  // so the summary reflects the bakery's real state, not just this run's output.
+  const [openCriticalAlerts, openShortfallAlerts, pendingProcurements] = await Promise.all([
+    db.agentAlert.count({
+      where: { bakeryId, isDismissed: false, severity: "CRITICAL" },
+    }),
+    db.agentAlert.count({
+      where: { bakeryId, isDismissed: false, type: "SHORTFALL" },
+    }),
+    db.procurementRecommendation.count({
+      where: { bakeryId, approvedAt: null, dismissedAt: null },
+    }),
+  ]);
+  const outstandingIssues = openShortfallAlerts + openCriticalAlerts;
+
+  // ── 7. LOG THIS RUN ───────────────────────────────────────────────────────
   const total = stockAlerts + expiryAlerts + procurements + demandGaps + healed;
 
   await db.agentAction.create({
@@ -359,6 +376,8 @@ async function runMonitorForBakery(bakeryId: string) {
     stockAlerts, expiryAlerts, demandGaps,
     procurements, healed, healed_failed,
     totalActionsLogged: total,
+    outstandingIssues,
+    pendingProcurements,
     summary,
   };
 }
