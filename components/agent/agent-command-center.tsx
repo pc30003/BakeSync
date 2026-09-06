@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { CountUp } from "@/components/ui/count-up";
-import { ShieldCheck, AlertTriangle, XCircle, Zap, Activity } from "lucide-react";
+import { ShieldCheck, AlertTriangle, XCircle, Activity } from "lucide-react";
 
 interface AgentCommandCenterProps {
   critical:     number;
