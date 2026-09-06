@@ -333,7 +333,21 @@ export async function writeSchedule(
     }
 
     // ── 5. Create alerts for AI warnings ────────────────────────────────────
+    // Dedup: don't raise a planning note that's already open with the same
+    // message (regenerating a schedule while a problem persists would otherwise
+    // stack identical warnings).
     for (const warning of plan.warnings) {
+      const existing = await db.agentAlert.findFirst({
+        where: {
+          bakeryId,
+          type:        "DELAY",
+          title:       "Production planning note",
+          message:     warning,
+          isDismissed: false,
+        },
+      });
+      if (existing) continue;
+
       await db.agentAlert.create({
         data: {
           bakeryId,

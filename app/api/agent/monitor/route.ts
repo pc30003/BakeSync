@@ -75,7 +75,17 @@ async function runMonitorForBakery(bakeryId: string) {
   const now     = new Date();
   const summary: string[] = [];
   let stockAlerts = 0, expiryAlerts = 0, demandGaps = 0,
-      procurements = 0, healed = 0, healed_failed = 0;
+      procurements = 0, healed = 0, healed_failed = 0, resolved = 0;
+
+  // ── 0. AUTO-RESOLVE: dismiss alerts whose problem is already fixed ─────────
+  // Alerts are raised when a condition is true, but nothing clears them once
+  // the condition is resolved (stock restocked, schedule generated). Without
+  // this, "Needs attention" keeps showing warnings for problems that no longer
+  // exist. This pass runs first so the board reflects current reality.
+  resolved += await resolveObsoleteAlerts(bakeryId, now);
+  if (resolved > 0) {
+    summary.push(`✅ Cleared ${resolved} resolved alert${resolved !== 1 ? "s" : ""}`);
+  }
 
   // ── 1. STOCK LEVEL MONITORING ─────────────────────────────────────────────
   const criticals = await db.ingredient.findMany({
@@ -349,7 +359,7 @@ async function runMonitorForBakery(bakeryId: string) {
   const outstandingIssues = openShortfallAlerts + openCriticalAlerts;
 
   // ── 7. LOG THIS RUN (only when it actually did something) ─────────────────
-  const total = stockAlerts + expiryAlerts + procurements + demandGaps + healed;
+  const total = stockAlerts + expiryAlerts + procurements + demandGaps + healed + resolved;
 
   // Skip logging pure no-op "all healthy" runs. The monitor may run very often
   // (cron + manual clicks); logging an identical row every time floods the
@@ -364,6 +374,7 @@ async function runMonitorForBakery(bakeryId: string) {
     if (procurements) parts.push(`${procurements} reorder${procurements !== 1 ? "s" : ""} raised`);
     if (expiryAlerts) parts.push(`${expiryAlerts} expiry alert${expiryAlerts !== 1 ? "s" : ""}`);
     if (demandGaps)   parts.push(`${demandGaps} demand gap${demandGaps !== 1 ? "s" : ""}`);
+    if (resolved)     parts.push(`${resolved} resolved`);
     if (healed)       parts.push(`${healed} self-healed`);
     const headline = parts.join(" · ") || `${total} action${total !== 1 ? "s" : ""}`;
 
@@ -376,7 +387,7 @@ async function runMonitorForBakery(bakeryId: string) {
         details: {
           ranAt: now.toISOString(),
           stockAlerts, expiryAlerts, demandGaps,
-          procurements, healed, healed_failed,
+          procurements, healed, healed_failed, resolved,
           summary,
         },
         requiresApproval: false,
@@ -389,10 +400,98 @@ async function runMonitorForBakery(bakeryId: string) {
   return {
     bakeryId, ranAt: now.toISOString(),
     stockAlerts, expiryAlerts, demandGaps,
-    procurements, healed, healed_failed,
+    procurements, healed, healed_failed, resolved,
     totalActionsLogged: total,
     outstandingIssues,
     pendingProcurements,
     summary,
   };
+}
+
+// ─── Auto-resolve obsolete alerts ──────────────────────────────────────────────
+// Dismisses open alerts whose underlying problem no longer exists. Purely
+// additive — it only flips isDismissed to true, never creates or deletes data.
+// Returns the number of alerts resolved.
+async function resolveObsoleteAlerts(bakeryId: string, now: Date): Promise<number> {
+  let count = 0;
+
+  // 1. SHORTFALL alerts tied to an ingredient that has since been restocked.
+  //    (alertLevel back to OK or LOW means it's above the critical threshold.)
+  const shortfallAlerts = await db.agentAlert.findMany({
+    where: {
+      bakeryId,
+      type:              "SHORTFALL",
+      isDismissed:       false,
+      relatedEntityType: "Ingredient",
+      relatedEntityId:   { not: null },
+    },
+    select: { id: true, relatedEntityId: true },
+  });
+
+  if (shortfallAlerts.length > 0) {
+    const ids = Array.from(
+      new Set(shortfallAlerts.map(a => a.relatedEntityId!).filter(Boolean))
+    );
+    const ingredients = await db.ingredient.findMany({
+      where:  { id: { in: ids } },
+      select: { id: true, alertLevel: true },
+    });
+    const healthy = new Set(
+      ingredients
+        .filter(i => i.alertLevel === "OK" || i.alertLevel === "LOW")
+        .map(i => i.id)
+    );
+
+    const toResolve = shortfallAlerts
+      .filter(a => a.relatedEntityId && healthy.has(a.relatedEntityId))
+      .map(a => a.id);
+
+    if (toResolve.length > 0) {
+      const res = await db.agentAlert.updateMany({
+        where: { id: { in: toResolve } },
+        data:  { isDismissed: true, isRead: true },
+      });
+      count += res.count;
+    }
+  }
+
+  // 2. "No production schedule for tomorrow" alerts — resolve once a schedule
+  //    for tomorrow exists.
+  const tomorrow = addDays(now, 1);
+  const scheduleExists = await db.productionSchedule.findFirst({
+    where: {
+      bakeryId,
+      scheduleDate: { gte: startOfDay(tomorrow), lte: endOfDay(tomorrow) },
+    },
+    select: { id: true },
+  });
+  if (scheduleExists) {
+    const res = await db.agentAlert.updateMany({
+      where: {
+        bakeryId,
+        type:        "DELAY",
+        title:       { contains: "No production schedule" },
+        isDismissed: false,
+      },
+      data: { isDismissed: true, isRead: true },
+    });
+    count += res.count;
+  }
+
+  // 3. Free-text AI "Production planning note" warnings have no entity link, so
+  //    they can't be tied to a live condition. They're advisory, generated at
+  //    plan time — age them out after 24h so stale notes don't pile up.
+  const staleNotes = await db.agentAlert.updateMany({
+    where: {
+      bakeryId,
+      type:        "DELAY",
+      title:       "Production planning note",
+      isDismissed: false,
+      createdAt:   { lt: subHours(now, 24) },
+    },
+    data: { isDismissed: true, isRead: true },
+  });
+  count += staleNotes.count;
+
+  return count;
 }
