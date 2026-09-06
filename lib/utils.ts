@@ -19,8 +19,40 @@ export function formatGrams(grams: number): string {
   return `${formatted} kg`;
 }
 
+// Approximate FX rates relative to USD (the currency stored prices are in).
+// Fixed on purpose: a demo needs sensible, stable numbers per currency — not a
+// live forex dependency that could be slow or fail. Refresh occasionally if desired.
+const USD_RATES: Record<string, number> = {
+  USD: 1,
+  GBP: 0.79,
+  EUR: 0.92,
+  AUD: 1.52,
+  CAD: 1.36,
+  NZD: 1.66,
+  SGD: 1.35,
+  AED: 3.67,
+  JPY: 150,
+};
+
+// Currencies that are conventionally shown without decimal places.
+const ZERO_DECIMAL = new Set(["JPY"]);
+
+/**
+ * Formats a monetary amount for display.
+ * Stored amounts are treated as USD (the base). If a different display currency
+ * is given, the amount is converted using the fixed rate table above so the
+ * figure is realistic for that currency (e.g. SGD 16 → about ¥1,800, not ¥16).
+ */
 export function formatCurrency(amount: number, currency = "USD"): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  const code = currency in USD_RATES ? currency : "USD";
+  const converted = amount * USD_RATES[code];
+  const fractionDigits = ZERO_DECIMAL.has(code) ? 0 : 2;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: code,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(converted);
 }
 
 export function formatDate(date: Date | string): string {
