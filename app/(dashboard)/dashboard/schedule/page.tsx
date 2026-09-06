@@ -7,7 +7,7 @@ import { AgentLogPanel } from "@/components/schedule/agent-log-panel";
 import { ScheduleApproveButton } from "@/components/schedule/schedule-approve-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
-import { startOfDay, endOfDay, addDays, format } from "date-fns";
+import { startOfDay, endOfDay, format } from "date-fns";
 import { CalendarDays, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Production Schedule" };
@@ -24,13 +24,13 @@ export default async function SchedulePage() {
   const isHead   = session!.user.role === "HEAD_BAKER";
   const now      = new Date();
 
-  // Load today + next 2 days
+  // Load today's schedule only
   const schedules = await db.productionSchedule.findMany({
     where: {
       bakeryId,
       scheduleDate: {
         gte: startOfDay(now),
-        lte: endOfDay(addDays(now, 2)),
+        lte: endOfDay(now),
       },
     },
     include: {
@@ -65,7 +65,7 @@ export default async function SchedulePage() {
             Production Schedule
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {formatDate(now)} · Today and the next 2 days
+            {formatDate(now)} · Today's production plan
           </p>
         </div>
       </div>
