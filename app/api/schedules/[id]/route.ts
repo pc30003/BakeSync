@@ -2,15 +2,18 @@
  * GET   /api/schedules/[id]   — fetch a single schedule with full batch detail
  * PATCH /api/schedules/[id]   — approve or revoke a schedule
  *
- * When a schedule is APPROVED the agent automatically:
- *   1. Deducts ingredient stock for every batch (quantity × scaleFactor × wastageBuffer)
- *   2. Recomputes alert levels on all affected ingredients
- *   3. Creates ProcurementRecommendations for any ingredient that goes LOW/CRITICAL
- *   4. Fires AgentAlerts for CRITICAL shortfalls
- *   5. Logs an AgentAction recording every deduction made
+ * Stock model: APPROVING a schedule does NOT deduct stock. Stock is deducted
+ * incrementally as floor staff mark each checklist step DONE (see the checklist
+ * route) — so the numbers reflect what has actually been made, not just planned.
  *
- * When a schedule is REVOKED the stock deductions are NOT reversed
- * (they are already consumed). A note is added to aiNotes.
+ * When a schedule is APPROVED:
+ *   1. It is marked approved so its checklists become tickable by floor staff.
+ *   2. An AgentAction is logged recording the approval.
+ *
+ * When a schedule is REVOKED:
+ *   1. Stock deducted by any completed (DONE) checklist steps is RESTORED.
+ *   2. Affected ingredients' alert levels are recomputed.
+ *   3. All checklist items reset to PENDING and all batches reset to SCHEDULED.
  */
 
 import { NextRequest } from "next/server";
@@ -19,6 +22,7 @@ import { db } from "@/lib/db";
 import {
   ok, notFound, serverError, validationError, requireAuth, error,
 } from "@/lib/api-helpers";
+import { computeAlertLevel } from "@/lib/stock-actions";
 
 const ApproveSchema = z.object({
   approved: z.boolean(),
@@ -141,62 +145,63 @@ export async function PATCH(
         include: { deductions: true },
       });
 
-      // Restore stock for every ingredient that was deducted
-      for (const item of doneItems) {
-        const restorations: Array<{ ingredientId: string; grams: number }> = [];
-        if (item.deductions && item.deductions.length > 0) {
-          for (const d of item.deductions) {
-            restorations.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
+      // Do the restore + reset atomically so a mid-way failure can't leave
+      // stock restored while items stay DONE (which a retry would double-restore).
+      const revoked = await db.$transaction(async (tx) => {
+        for (const item of doneItems) {
+          const restorations: Array<{ ingredientId: string; grams: number }> = [];
+          if (item.deductions && item.deductions.length > 0) {
+            for (const d of item.deductions) {
+              restorations.push({ ingredientId: d.ingredientId, grams: d.deductionGrams });
+            }
+          } else if (item.ingredientId && item.deductionGrams) {
+            restorations.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
           }
-        } else if (item.ingredientId && item.deductionGrams) {
-          restorations.push({ ingredientId: item.ingredientId, grams: item.deductionGrams });
+
+          for (const r of restorations) {
+            const ingredient = await tx.ingredient.findUnique({ where: { id: r.ingredientId } });
+            if (ingredient) {
+              const newStock = Number(ingredient.stockGrams) + r.grams;
+              const alertLevel = computeAlertLevel(
+                newStock,
+                Number(ingredient.criticalThresholdGrams),
+                Number(ingredient.reorderThresholdGrams)
+              );
+              await tx.ingredient.update({
+                where: { id: r.ingredientId },
+                data:  { stockGrams: newStock, alertLevel },
+              });
+            }
+          }
         }
 
-        for (const r of restorations) {
-          const ingredient = await db.ingredient.findUnique({ where: { id: r.ingredientId } });
-          if (ingredient) {
-            const newStock = Number(ingredient.stockGrams) + r.grams;
-            const critical = Number(ingredient.criticalThresholdGrams);
-            const reorder  = Number(ingredient.reorderThresholdGrams);
-            const alertLevel =
-              newStock <= 0        ? "OUT_OF_STOCK" :
-              newStock <= critical ? "CRITICAL"     :
-              newStock <= reorder  ? "LOW"          :
-              "OK";
-            await db.ingredient.update({
-              where: { id: r.ingredientId },
-              data:  { stockGrams: newStock, alertLevel },
-            });
-          }
-        }
-      }
+        // Reset all checklist items back to PENDING
+        await tx.checklistItem.updateMany({
+          where: {
+            batch: { scheduleId: params.id },
+            status: { in: ["DONE", "IN_PROGRESS"] },
+          },
+          data: {
+            status:        "PENDING",
+            completedById: null,
+            completedAt:   null,
+          },
+        });
 
-      // Reset all checklist items back to PENDING
-      await db.checklistItem.updateMany({
-        where: {
-          batch: { scheduleId: params.id },
-          status: { in: ["DONE", "IN_PROGRESS"] },
-        },
-        data: {
-          status:        "PENDING",
-          completedById: null,
-          completedAt:   null,
-        },
-      });
+        // Reset batch statuses back to SCHEDULED
+        await tx.productionBatch.updateMany({
+          where: { scheduleId: params.id },
+          data: { status: "SCHEDULED" },
+        });
 
-      // Reset batch statuses back to SCHEDULED
-      await db.productionBatch.updateMany({
-        where: { scheduleId: params.id },
-        data: { status: "SCHEDULED" },
-      });
-
-      const revoked = await db.productionSchedule.update({
-        where: { id: params.id },
-        data: {
-          isApproved:   false,
-          approvedById: null,
-          approvedAt:   null,
-        },
+        return tx.productionSchedule.update({
+          where: { id: params.id },
+          data: {
+            isApproved:   false,
+            approvedById: null,
+            approvedAt:   null,
+          },
+        });
       });
 
       return ok({

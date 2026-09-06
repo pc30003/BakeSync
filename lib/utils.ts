@@ -6,6 +6,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatGrams(grams: number): string {
+  // Never display negative stock. Internally stock can dip below zero so that
+  // deduct/restore stays perfectly symmetric (no phantom stock), but to a user
+  // "out of stock" is 0 g, not a negative number.
+  if (grams < 0) grams = 0;
   // Smart units: grams for small amounts, kg for bulk (with enough precision
   // to show small deductions).
   if (grams < 2000) {

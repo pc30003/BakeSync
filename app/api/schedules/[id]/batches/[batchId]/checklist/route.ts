@@ -84,7 +84,12 @@ export async function PATCH(
           for (const d of stepDeductions) {
             const ingredient = await tx.ingredient.findUnique({ where: { id: d.ingredientId } });
             if (ingredient) {
-              const newStock = Math.max(0, Number(ingredient.stockGrams) - d.grams);
+              // NOTE: do NOT clamp at 0 here. Clamping the deduct while the
+              // restore adds back the full amount is what created phantom stock
+              // (deduct-to-zero then untick inflated the balance). Allowing the
+              // balance to go negative keeps deduct/restore perfectly symmetric;
+              // the UI displays anything ≤0 as "out of stock" / 0 g.
+              const newStock = Number(ingredient.stockGrams) - d.grams;
               const alertLevel = computeAlertLevel(
                 newStock,
                 Number(ingredient.criticalThresholdGrams),
@@ -165,6 +170,25 @@ export async function PATCH(
           });
         }
       }
+
+      // ── Advance the batch status to reflect checklist progress ──────────
+      // SCHEDULED (nothing started) → IN_PROGRESS (some done) → COMPLETED (all done).
+      // Recomputed from the actual item states so it's always accurate, whether
+      // the user just ticked, unticked, or cascade-reverted steps above.
+      const batchItems = await tx.checklistItem.findMany({
+        where:  { batchId: params.batchId },
+        select: { status: true },
+      });
+      const total    = batchItems.length;
+      const doneCount = batchItems.filter((i) => i.status === "DONE").length;
+      const batchStatus =
+        total > 0 && doneCount === total ? "COMPLETED" :
+        doneCount > 0                    ? "IN_PROGRESS" :
+        "SCHEDULED";
+      await tx.productionBatch.update({
+        where: { id: params.batchId },
+        data:  { status: batchStatus },
+      });
 
       return result;
     });
