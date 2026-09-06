@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 
 // ── Event name used to (re)launch the tour from anywhere (e.g. the TopBar) ──
 export const DEMO_TOUR_EVENT = "bakesync:open-tour";
-const SEEN_KEY = "bakesync-tour-seen";
+// sessionStorage (not localStorage): the tour greets every fresh visit/login —
+// ideal for a competition where new judges log in — but won't re-pop while the
+// same person navigates around during one session. The Tour button reopens it anytime.
+const SEEN_KEY = "bakesync-tour-seen-session";
 
 /** Fire this from any client component to open the tour. */
 export function openDemoTour() {
@@ -238,14 +241,15 @@ export function DemoTour({ role }: DemoTourProps) {
 
   const close = useCallback(() => {
     setVisible(false);
-    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
+    try { sessionStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
   }, []);
 
-  // Auto-show once (first visit), then allow manual relaunch via event.
+  // Auto-show once per session/visit (greets every fresh login), then allow
+  // manual relaunch via the Tour button event.
   useEffect(() => {
     if (!IS_DEMO) return;
     let seen = false;
-    try { seen = localStorage.getItem(SEEN_KEY) === "1"; } catch { /* ignore */ }
+    try { seen = sessionStorage.getItem(SEEN_KEY) === "1"; } catch { /* ignore */ }
     if (!seen) {
       const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);

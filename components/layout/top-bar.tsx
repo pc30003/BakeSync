@@ -88,12 +88,12 @@ export function TopBar({ user, onMenuClick, openingTime = "05:00", closingTime =
         {IS_DEMO && (
           <button
             onClick={() => openDemoTour()}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors tap-target"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-colors tap-target"
             aria-label="Take the feature tour"
             title="Take the feature tour"
           >
             <Sparkles className="w-4 h-4" />
-            <span className="hidden md:inline">Tour</span>
+            <span>Tour</span>
           </button>
         )}
 
