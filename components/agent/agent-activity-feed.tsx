@@ -14,7 +14,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bot, AlertTriangle, XCircle, Info,
+  Bot, AlertTriangle, XCircle, Info, CheckCircle2,
   Clock, ChevronDown, ChevronUp, RefreshCw, Play,
   Loader2, Package, CalendarDays, Zap, ShoppingCart, X,
 } from "lucide-react";
@@ -90,7 +90,6 @@ export function AgentActivityFeed({
 
   const [alerts,  setAlerts]  = useState(initialAlerts);
   const [actions, setActions] = useState(initialActions);
-  const [tab,     setTab]     = useState<"all" | "alerts" | "actions">("all");
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
   const [monitorRunning, setMonitorRunning] = useState(false);
   const [monitorResult,  setMonitorResult]  = useState<string | null>(null);
@@ -162,16 +161,6 @@ export function AgentActivityFeed({
     }
   }
 
-  // ── Merged timeline ──────────────────────────────────────────────────────
-  type TimelineItem =
-    | { kind: "alert";  ts: number; data: AgentAlertRow  }
-    | { kind: "action"; ts: number; data: AgentActionRow };
-
-  const timeline: TimelineItem[] = [
-    ...alerts.map(a  => ({ kind: "alert"  as const, ts: new Date(a.createdAt).getTime(),   data: a })),
-    ...actions.map(a => ({ kind: "action" as const, ts: new Date(a.triggeredAt).getTime(), data: a })),
-  ].sort((a, b) => b.ts - a.ts);
-
   // Hide legacy no-op monitor rows so the feed stays high-signal even if the
   // database still holds old "all healthy" / blank-summary heartbeat entries
   // from before the monitor stopped logging them. (New runs never log no-ops.)
@@ -180,61 +169,56 @@ export function AgentActivityFeed({
     return /all systems healthy/i.test(s) || /action\(s\)\s*—\s*$/.test(s);
   };
 
-  const filtered = timeline.filter(item => {
-    if (item.kind === "action" && isNoopMonitor(item.data)) return false;
-    if (tab === "alerts")  return item.kind === "alert";
-    if (tab === "actions") return item.kind === "action";
-    return true;
-  });
-
   const unreadCount = alerts.filter(a => !a.isRead).length;
+
+  // ── Zone 1: NEEDS ATTENTION — open, unresolved alerts, severity-first ─────
+  const SEV_RANK: Record<string, number> = { CRITICAL: 0, WARNING: 1, INFO: 2 };
+  const openAlerts = alerts
+    .filter(a => !a.isDismissed)
+    .sort((a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9)
+                 || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // ── Zone 2: AGENT ACTIVITY — history of what the agent did (quieter) ──────
+  const activity = actions
+    .filter(a => !isNoopMonitor(a))
+    .sort((a, b) => new Date(b.triggeredAt).getTime() - new Date(a.triggeredAt).getTime());
+
+  // Last successful monitor run, for the status strip.
+  const lastMonitorRun = actions
+    .filter(a => a.type === "FLAG_SHORTFALL" && a.completedAt)
+    .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
 
-      {/* ── Control bar ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          {/* Tab pills */}
-          {(["all", "alerts", "actions"] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize",
-                tab === t
-                  ? "bg-primary text-white"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {t}
-              {t === "alerts" && unreadCount > 0 && (
-                <span className="ml-1.5 bg-destructive text-white rounded-full text-[10px] px-1.5 py-0.5">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-          ))}
+      {/* ── Monitoring status strip ─────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500/60" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Autonomous monitoring active</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {lastMonitorRun
+                ? `Last check ${formatDistanceToNow(new Date(lastMonitorRun.completedAt!), { addSuffix: true })} · watching stock, expiry & demand`
+                : "Continuously watching stock levels, expiry dates & upcoming demand"}
+            </p>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllRead}>
-              Mark all read
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            loading={monitorRunning}
-            onClick={runMonitor}
-            leftIcon={monitorRunning ? undefined : <Play className="w-3.5 h-3.5" />}
-          >
-            Run monitor now
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          loading={monitorRunning}
+          onClick={runMonitor}
+          leftIcon={monitorRunning ? undefined : <Play className="w-3.5 h-3.5" />}
+          className="shrink-0"
+        >
+          Run monitor now
+        </Button>
       </div>
 
       {/* Monitor result banner */}
@@ -245,60 +229,76 @@ export function AgentActivityFeed({
         </div>
       )}
 
-      {/* ── Timeline ────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
-        <div className="py-16 text-center space-y-3">
-          <Bot className="w-12 h-12 mx-auto text-muted-foreground/20" />
-          <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
-          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Run the monitor or generate a production schedule to see the agent's
-            reasoning trail appear here.
-          </p>
+      {/* ── ZONE 1: NEEDS ATTENTION ─────────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">Needs attention</h2>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              {openAlerts.length}
+            </span>
+          </div>
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={markAllRead}>Mark all read</Button>
+          )}
         </div>
-      ) : (
-        <div className="relative">
-          {/* Vertical spine */}
-          <div
-            className="absolute left-[18px] top-6 bottom-0 w-px bg-border"
-            aria-hidden="true"
-          />
 
-          <ul className="space-y-3" role="list">
-            {filtered.map((item) => (
-              <li key={`${item.kind}-${item.data.id}`} className="flex gap-4">
-
-                {/* ── Timeline dot ──────────────────────────────────────── */}
-                <div className="shrink-0 w-9 h-9 mt-0.5 flex items-center justify-center z-10">
-                  {item.kind === "alert" ? (
-                    <AlertDot alert={item.data} />
-                  ) : (
-                    <ActionDot action={item.data} />
-                  )}
-                </div>
-
-                {/* ── Card ──────────────────────────────────────────────── */}
-                <div className="flex-1 min-w-0 pb-2">
-                  {item.kind === "alert" ? (
-                    <AlertCard
-                      alert={item.data}
-                      onDismiss={dismissAlert}
-                    />
-                  ) : (
-                    <ActionCard
-                      action={item.data}
-                      expanded={expandedAction === item.data.id}
-                      onToggle={() =>
-                        setExpandedAction(v => v === item.data.id ? null : item.data.id)
-                      }
-                    />
-                  )}
-                </div>
-
+        {openAlerts.length === 0 ? (
+          <div className="rounded-xl border border-green-200 bg-green-50/60 dark:border-green-900/50 dark:bg-green-950/20 px-4 py-6 text-center">
+            <CheckCircle2 className="w-8 h-8 mx-auto text-green-500 mb-1.5" />
+            <p className="text-sm font-medium text-green-800 dark:text-green-300">All clear</p>
+            <p className="text-xs text-green-700/80 dark:text-green-400/80">No open alerts — the agent has everything under control.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2.5" role="list">
+            {openAlerts.map(alert => (
+              <li key={alert.id}>
+                <AlertCard alert={alert} onDismiss={dismissAlert} />
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* ── ZONE 2: AGENT ACTIVITY ──────────────────────────────────────── */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Bot className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">Agent activity</h2>
+          <span className="text-[11px] text-muted-foreground">every autonomous decision, logged</span>
         </div>
-      )}
+
+        {activity.length === 0 ? (
+          <div className="py-10 text-center">
+            <Bot className="w-10 h-10 mx-auto text-muted-foreground/20 mb-2" />
+            <p className="text-sm font-medium text-muted-foreground">No activity yet</p>
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+              Generate a schedule or run the monitor to see the agent's reasoning trail here.
+            </p>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="absolute left-[15px] top-4 bottom-2 w-px bg-border" aria-hidden="true" />
+            <ul className="space-y-2" role="list">
+              {activity.map(action => (
+                <li key={action.id} className="flex gap-3.5">
+                  <div className="shrink-0 w-8 h-8 mt-0.5 flex items-center justify-center z-10">
+                    <ActionDot action={action} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <ActionCard
+                      action={action}
+                      expanded={expandedAction === action.id}
+                      onToggle={() => setExpandedAction(v => v === action.id ? null : action.id)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
