@@ -119,7 +119,10 @@ async function runMonitorForBakery(bakeryId: string) {
     if (!openRec) {
       const reorder = Number(ing.reorderThresholdGrams);
       const current = Number(ing.stockGrams);
-      const order   = Math.max(reorder - current, 0) * 1.3;
+      // Refill to a healthy target (2× the reorder line), ordering the gap from
+      // current stock. Matches handleStockChange so both paths agree.
+      const target  = reorder * 2;
+      const order   = Math.max(0, target - current);
       await db.procurementRecommendation.create({
         data: {
           bakeryId,

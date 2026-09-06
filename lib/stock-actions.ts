@@ -99,8 +99,14 @@ export async function handleStockChange({
     });
 
     if (!existingRec) {
-      const shortfall = Number(ingredient.reorderThresholdGrams) - newStock;
-      const orderGrams = shortfall * 1.5; // 50% buffer
+      const reorder   = Number(ingredient.reorderThresholdGrams);
+      // Refill to a HEALTHY target — twice the reorder line — not just back to
+      // the threshold (which would immediately risk tripping LOW again). We
+      // order the gap from current stock up to that target. Same reasoning as
+      // the monitor route so both procurement paths agree.
+      const target    = reorder * 2;
+      const shortfall = Math.max(0, reorder - newStock);       // how far below the alarm line
+      const orderGrams = Math.max(0, target - newStock);       // amount to reach the healthy target
       const urgency = alertLevel === "OUT_OF_STOCK" ? "CRITICAL"
                     : alertLevel === "CRITICAL"     ? "HIGH"
                     : "MEDIUM";
@@ -110,7 +116,7 @@ export async function handleStockChange({
           bakeryId,
           ingredientId,
           currentStockGrams:     newStock,
-          requiredGrams:         Number(ingredient.reorderThresholdGrams),
+          requiredGrams:         reorder,
           shortfallGrams:        shortfall,
           recommendedOrderGrams: orderGrams,
           supplierId:            ingredient.supplierId,
