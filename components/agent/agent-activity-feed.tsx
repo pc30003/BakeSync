@@ -13,10 +13,11 @@
 
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Bot, AlertTriangle, XCircle, Info, CheckCircle2,
   Clock, ChevronDown, ChevronUp, RefreshCw, Play,
-  Loader2, Package, CalendarDays, Zap, ShoppingCart, X,
+  Loader2, Package, CalendarDays, Zap, ShoppingCart, X, ArrowRight,
 } from "lucide-react";
 import { cn, formatDateTime, formatGrams } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -188,10 +189,49 @@ export function AgentActivityFeed({
     .filter(a => a.type === "FLAG_SHORTFALL" && a.completedAt)
     .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
 
+  // ── Summary header counts — one-glance triage ────────────────────────────
+  const criticalCount = openAlerts.filter(a => a.severity === "CRITICAL").length;
+  const warningCount  = openAlerts.filter(a => a.severity === "WARNING").length;
+  const infoCount     = openAlerts.filter(a => a.severity === "INFO").length;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const actionsToday = activity.filter(
+    a => new Date(a.triggeredAt).getTime() >= startOfToday.getTime()
+  ).length;
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
+
+      {/* ── One-glance summary header ───────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <SummaryTile
+          label="Critical"
+          value={criticalCount}
+          hint={criticalCount ? "act now" : "none open"}
+          tone={criticalCount ? "critical" : "neutral"}
+        />
+        <SummaryTile
+          label="Warnings"
+          value={warningCount}
+          hint={warningCount ? "review soon" : "none open"}
+          tone={warningCount ? "warning" : "neutral"}
+        />
+        <SummaryTile
+          label="Info"
+          value={infoCount}
+          hint={infoCount ? "for awareness" : "none open"}
+          tone="neutral"
+        />
+        <SummaryTile
+          label="Actions today"
+          value={actionsToday}
+          hint="autonomous"
+          tone="accent"
+        />
+      </div>
 
       {/* ── Monitoring status strip ─────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
@@ -303,6 +343,40 @@ export function AgentActivityFeed({
   );
 }
 
+// ─── Summary tile ───────────────────────────────────────────────────────────
+
+function SummaryTile({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: number;
+  hint:  string;
+  tone:  "critical" | "warning" | "accent" | "neutral";
+}) {
+  const toneStyles: Record<typeof tone, string> = {
+    critical: "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30",
+    warning:  "border-yellow-200 bg-yellow-50 dark:border-yellow-900/50 dark:bg-yellow-950/30",
+    accent:   "border-primary/20 bg-primary/5",
+    neutral:  "border-border bg-card",
+  };
+  const valueStyles: Record<typeof tone, string> = {
+    critical: "text-red-600 dark:text-red-400",
+    warning:  "text-yellow-600 dark:text-yellow-400",
+    accent:   "text-primary",
+    neutral:  "text-foreground",
+  };
+  return (
+    <div className={cn("rounded-xl border px-3.5 py-3", toneStyles[tone])}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-2xl font-bold leading-none tabular-nums", valueStyles[tone])}>{value}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground/80">{hint}</p>
+    </div>
+  );
+}
+
 // ─── Alert dot ────────────────────────────────────────────────────────────────
 
 function AlertDot({ alert }: { alert: AgentAlertRow }) {
@@ -341,12 +415,25 @@ function AlertCard({
   onDismiss: (id: string) => void;
 }) {
   const meta = SEVERITY_META[alert.severity] ?? SEVERITY_META.INFO;
+
+  // Severity spine — a bold left accent so critical alerts are impossible to miss.
+  const spine: Record<string, string> = {
+    CRITICAL: "border-l-red-500",
+    WARNING:  "border-l-yellow-500",
+    INFO:     "border-l-blue-400",
+  };
+
+  // Contextual "fix it here" links, chosen by alert type / content.
+  const actions = alertActions(alert);
+
   return (
     <div className={cn(
-      "rounded-xl border p-4 transition-all",
+      "rounded-xl border border-l-4 p-4 transition-all",
       meta.bg,
+      spine[alert.severity] ?? "border-l-blue-400",
       `ring-1 ${meta.ring}`,
-      !alert.isRead && "shadow-sm"
+      !alert.isRead && "shadow-sm",
+      alert.severity === "CRITICAL" && !alert.isRead && "shadow-md"
     )}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -371,6 +458,26 @@ function AlertCard({
             {formatDistanceToNow(new Date(alert.createdAt), { addSuffix: true })}
             {alert.relatedEntityType && ` · ${alert.relatedEntityType}`}
           </p>
+
+          {actions.length > 0 && (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {actions.map(a => (
+                <Link
+                  key={a.href}
+                  href={a.href}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold tap-target transition-colors",
+                    a.primary
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-white/70 dark:bg-white/5 border border-black/10 dark:border-white/10 hover:bg-white/90 dark:hover:bg-white/10 " + meta.text
+                  )}
+                >
+                  {a.label}
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
         <button
           onClick={() => onDismiss(alert.id)}
@@ -382,6 +489,26 @@ function AlertCard({
       </div>
     </div>
   );
+}
+
+// Choose contextual "fix it here" links for an alert, by type + content.
+function alertActions(alert: AgentAlertRow): { label: string; href: string; primary?: boolean }[] {
+  const type = (alert.type ?? "").toUpperCase();
+  const text = `${alert.title} ${alert.message}`.toLowerCase();
+
+  if (type === "SHORTFALL" || type === "EXPIRY" || /stock|out of stock|expir/.test(text)) {
+    return [
+      { label: "Order now", href: "/dashboard/purchasing", primary: true },
+      { label: "View inventory", href: "/dashboard/inventory" },
+    ];
+  }
+  if (type === "DELAY" || /schedule/.test(text)) {
+    return [{ label: "Generate schedule", href: "/dashboard/schedule", primary: true }];
+  }
+  if (type === "PROCUREMENT" || /procurement|supplier|order/.test(text)) {
+    return [{ label: "Review procurement", href: "/dashboard/purchasing", primary: true }];
+  }
+  return [];
 }
 
 // ─── Action card ──────────────────────────────────────────────────────────────
