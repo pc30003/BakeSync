@@ -7,7 +7,7 @@ import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { Badge } from "@/components/ui/badge";
 import { StockLevelBar } from "@/components/ui/stock-level-bar";
 import { formatGrams, formatCurrency } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { RelativeTime } from "@/components/ui/relative-time";
 import { Package } from "lucide-react";
 
 export const metadata: Metadata = { title: "Inventory" };
@@ -130,9 +130,9 @@ export default async function InventoryPage() {
                       {ing.supplier?.name ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell text-xs whitespace-nowrap">
-                      {lastRestocked.has(ing.id)
-                        ? `${formatDistanceToNow(lastRestocked.get(ing.id)!, { addSuffix: true })}`
-                        : "—"}
+                      <RelativeTime
+                        date={lastRestocked.get(ing.id)?.toISOString() ?? null}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <Badge variant={alertVariant[ing.alertLevel] as any}>
