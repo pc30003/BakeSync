@@ -189,49 +189,10 @@ export function AgentActivityFeed({
     .filter(a => a.type === "FLAG_SHORTFALL" && a.completedAt)
     .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
 
-  // ── Summary header counts — one-glance triage ────────────────────────────
-  const criticalCount = openAlerts.filter(a => a.severity === "CRITICAL").length;
-  const warningCount  = openAlerts.filter(a => a.severity === "WARNING").length;
-  const infoCount     = openAlerts.filter(a => a.severity === "INFO").length;
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const actionsToday = activity.filter(
-    a => new Date(a.triggeredAt).getTime() >= startOfToday.getTime()
-  ).length;
-
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
-
-      {/* ── One-glance summary header ───────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <SummaryTile
-          label="Critical"
-          value={criticalCount}
-          hint={criticalCount ? "act now" : "none open"}
-          tone={criticalCount ? "critical" : "neutral"}
-        />
-        <SummaryTile
-          label="Warnings"
-          value={warningCount}
-          hint={warningCount ? "review soon" : "none open"}
-          tone={warningCount ? "warning" : "neutral"}
-        />
-        <SummaryTile
-          label="Info"
-          value={infoCount}
-          hint={infoCount ? "for awareness" : "none open"}
-          tone="neutral"
-        />
-        <SummaryTile
-          label="Actions today"
-          value={actionsToday}
-          hint="autonomous"
-          tone="accent"
-        />
-      </div>
 
       {/* ── Monitoring status strip ─────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
@@ -339,40 +300,6 @@ export function AgentActivityFeed({
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-// ─── Summary tile ───────────────────────────────────────────────────────────
-
-function SummaryTile({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: number;
-  hint:  string;
-  tone:  "critical" | "warning" | "accent" | "neutral";
-}) {
-  const toneStyles: Record<typeof tone, string> = {
-    critical: "border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30",
-    warning:  "border-yellow-200 bg-yellow-50 dark:border-yellow-900/50 dark:bg-yellow-950/30",
-    accent:   "border-primary/20 bg-primary/5",
-    neutral:  "border-border bg-card",
-  };
-  const valueStyles: Record<typeof tone, string> = {
-    critical: "text-red-600 dark:text-red-400",
-    warning:  "text-yellow-600 dark:text-yellow-400",
-    accent:   "text-primary",
-    neutral:  "text-foreground",
-  };
-  return (
-    <div className={cn("rounded-xl border px-3.5 py-3", toneStyles[tone])}>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-0.5 text-2xl font-bold leading-none tabular-nums", valueStyles[tone])}>{value}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground/80">{hint}</p>
     </div>
   );
 }

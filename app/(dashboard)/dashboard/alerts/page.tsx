@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/utils";
 import {
   Bot, AlertTriangle, Zap,
 } from "lucide-react";
-import { subDays } from "date-fns";
+
 
 export const metadata: Metadata = { title: "Agent Activity" };
 
@@ -17,7 +17,8 @@ export default async function AgentActivityPage() {
   const session  = await auth();
   const bakeryId = session!.user.bakeryId;
   const now      = new Date();
-  const last7    = subDays(now, 7);
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
 
   // Load everything in parallel
   const [alerts, actions, stats] = await Promise.all([
@@ -39,13 +40,13 @@ export default async function AgentActivityPage() {
     // KPI counts for the header row
     Promise.all([
       db.agentAlert.count({
-        where: { bakeryId, isRead: false, isDismissed: false },
-      }),
-      db.agentAlert.count({
         where: { bakeryId, severity: "CRITICAL", isDismissed: false },
       }),
+      db.agentAlert.count({
+        where: { bakeryId, severity: "WARNING", isDismissed: false },
+      }),
       db.agentAction.count({
-        where: { bakeryId, status: "COMPLETED", completedAt: { gte: last7 } },
+        where: { bakeryId, status: "COMPLETED", triggeredAt: { gte: startOfToday } },
       }),
       db.agentAction.count({
         where: { bakeryId, status: "FAILED" },
@@ -53,7 +54,7 @@ export default async function AgentActivityPage() {
     ]),
   ]);
 
-  const [unreadAlerts, criticalAlerts, actionsThisWeek, failedActions] = stats;
+  const [criticalAlerts, warningAlerts, actionsToday, failedActions] = stats;
 
   return (
     <div className="space-y-6">
@@ -96,22 +97,22 @@ export default async function AgentActivityPage() {
       {/* ── KPI row ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Unread alerts"
-          value={unreadAlerts}
-          subtitle="awaiting attention"
-          icon={<AlertTriangle className="w-5 h-5" />}
-          variant={unreadAlerts > 0 ? "warning" : "default"}
-        />
-        <StatCard
           title="Critical alerts"
           value={criticalAlerts}
-          subtitle="require immediate action"
+          subtitle={criticalAlerts > 0 ? "require immediate action" : "none open"}
           icon={<AlertTriangle className="w-5 h-5" />}
           variant={criticalAlerts > 0 ? "danger" : "default"}
         />
         <StatCard
-          title="Actions this week"
-          value={actionsThisWeek}
+          title="Warnings"
+          value={warningAlerts}
+          subtitle={warningAlerts > 0 ? "review soon" : "none open"}
+          icon={<AlertTriangle className="w-5 h-5" />}
+          variant={warningAlerts > 0 ? "warning" : "default"}
+        />
+        <StatCard
+          title="Actions today"
+          value={actionsToday}
           subtitle="completed autonomously"
           icon={<Zap className="w-5 h-5" />}
           variant="success"
@@ -119,7 +120,7 @@ export default async function AgentActivityPage() {
         <StatCard
           title="Failed actions"
           value={failedActions}
-          subtitle="need investigation"
+          subtitle={failedActions > 0 ? "need investigation" : "none — running clean"}
           icon={<Bot className="w-5 h-5" />}
           variant={failedActions > 0 ? "danger" : "default"}
         />
