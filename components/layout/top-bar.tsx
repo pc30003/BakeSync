@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Menu, Bell, LogOut, ExternalLink } from "lucide-react";
+import { Menu, Bell, LogOut, ExternalLink, Sparkles } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { openDemoTour } from "@/components/ui/demo-tour";
 import { ShiftClock } from "./shift-clock";
 import type { SessionUser } from "@/types";
+
+const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 
 interface TopBarProps {
   user: SessionUser;
@@ -81,6 +84,19 @@ export function TopBar({ user, onMenuClick, openingTime = "05:00", closingTime =
 
       {/* Right: theme + alerts + user */}
       <div className="flex items-center gap-2">
+        {/* Relaunch the feature tour (demo mode) */}
+        {IS_DEMO && (
+          <button
+            onClick={() => openDemoTour()}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-primary hover:bg-primary/10 transition-colors tap-target"
+            aria-label="Take the feature tour"
+            title="Take the feature tour"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden md:inline">Tour</span>
+          </button>
+        )}
+
         {/* Theme toggle */}
         <ThemeToggle />
 
