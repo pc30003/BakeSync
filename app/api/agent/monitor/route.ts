@@ -197,7 +197,6 @@ async function runMonitorForBakery(bakeryId: string) {
     });
 
     if (!hasSchedule) {
-      demandGaps++;
       const noGapAlert = await db.agentAlert.findFirst({
         where: {
           bakeryId,
@@ -208,7 +207,10 @@ async function runMonitorForBakery(bakeryId: string) {
         },
       });
 
+      // Only count + summarise when we actually raise a NEW alert, so the
+      // displayed total never claims an issue with nothing to show.
       if (!noGapAlert) {
+        demandGaps++;
         const totalItems = dueTomorrow.reduce(
           (s, o) => s + o.lineItems.reduce((ss, li) => ss + li.quantity, 0), 0
         );
@@ -221,7 +223,7 @@ async function runMonitorForBakery(bakeryId: string) {
             message:  `${dueTomorrow.length} order(s) totalling ${totalItems} items are due tomorrow with no schedule generated. Generate one from the Schedule page.`,
           },
         });
-        summary.push(`📅 Demand gap: ${dueTomorrow.length} orders, no schedule`);
+        summary.push(`📅 ${dueTomorrow.length} order(s) due tomorrow with no schedule — generate one`);
       }
     }
   }

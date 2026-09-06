@@ -14,7 +14,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Bot, AlertTriangle, XCircle, Info, CheckCircle2,
+  Bot, AlertTriangle, XCircle, Info,
   Clock, ChevronDown, ChevronUp, RefreshCw, Play,
   Loader2, Package, CalendarDays, Zap, ShoppingCart, X,
 } from "lucide-react";
@@ -136,12 +136,18 @@ export function AgentActivityFeed({
       const json = await res.json();
       const r = json.data?.results?.[0];
       if (r) {
-        const total = r.totalActionsLogged;
-        setMonitorResult(
-          total > 0
-            ? `Monitor found ${total} issue${total !== 1 ? "s" : ""}: ${r.summary.slice(0, 2).join("; ")}${r.summary.length > 2 ? "…" : ""}`
-            : "Monitor ran — all systems healthy ✓"
-        );
+        const items: string[] = Array.isArray(r.summary) ? r.summary : [];
+        if (items.length > 0) {
+          // Show the actual findings, one per line — never a bare "found N:".
+          setMonitorResult(
+            `Monitor found ${items.length} thing${items.length !== 1 ? "s" : ""} to act on:\n` +
+            items.map((s) => `• ${s}`).join("\n")
+          );
+        } else {
+          setMonitorResult("Monitor ran — everything's on track. No new issues. ✓");
+        }
+      } else {
+        setMonitorResult("Monitor ran — everything's on track. ✓");
       }
       router.refresh();
     } finally {
@@ -217,9 +223,9 @@ export function AgentActivityFeed({
 
       {/* Monitor result banner */}
       {monitorResult && (
-        <div className="px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm flex items-start gap-2 dark:bg-green-950/30 dark:border-green-900/50 dark:text-green-200">
-          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-          <span>{monitorResult}</span>
+        <div className="px-4 py-3 rounded-xl bg-primary/5 border border-primary/20 text-foreground text-sm flex items-start gap-2">
+          <Bot className="w-4 h-4 shrink-0 mt-0.5 text-primary" />
+          <span className="whitespace-pre-line leading-relaxed">{monitorResult}</span>
         </div>
       )}
 
