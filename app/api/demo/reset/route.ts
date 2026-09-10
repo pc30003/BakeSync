@@ -24,13 +24,27 @@ import {
 
 const IS_DEMO = process.env.NEXT_PUBLIC_APP_MODE === "demo";
 
-export async function POST(req: NextRequest) {
+// Vercel Cron sends a GET request, so we must handle GET (not just POST).
+// We also keep POST for manual triggers. Both share runReset().
+export async function GET(req: NextRequest)  { return runReset(req); }
+export async function POST(req: NextRequest) { return runReset(req); }
+
+async function runReset(req: NextRequest) {
   if (!IS_DEMO) {
     return error("Not available in production mode", 403);
   }
 
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Authorise via EITHER the Authorization: Bearer header OR a ?secret= query
+  // param. Vercel Cron automatically sends the Bearer header for scheduled
+  // requests; the query param lets you trigger a manual reset from a browser.
+  const secret     = process.env.CRON_SECRET;
+  const authHeader = req.headers.get("authorization");
+  const querySecret = req.nextUrl.searchParams.get("secret");
+  const isAuthorised =
+    (!!secret && authHeader === `Bearer ${secret}`) ||
+    (!!secret && querySecret === secret);
+
+  if (!isAuthorised) {
     return error("Unauthorized", 401);
   }
 
