@@ -78,14 +78,19 @@ async function runReset(req: NextRequest) {
       data: { id: "bakery_demo", name: "The Artisan Loaf", timezone: "Europe/London", openingTime: "06:30", closingTime: "22:00", currency: "USD", ovenCount: 3, isOnboarded: true },
     });
 
+    // Stable, fixed user IDs. Because the reset deletes and recreates users,
+    // auto-generated IDs would change every reset — invalidating any browser
+    // that's still logged in (its JWT would point at a now-deleted user id,
+    // causing foreign-key errors on writes like wastage logs). Pinning the IDs
+    // keeps existing sessions valid across resets.
     const headBaker = await db.user.create({
-      data: { email: "head@artisanloaf.com", name: "Sarah Chen", role: UserRole.HEAD_BAKER, password: demoPassword, bakeryId: bakery.id },
+      data: { id: "user_demo_head", email: "head@artisanloaf.com", name: "Sarah Chen", role: UserRole.HEAD_BAKER, password: demoPassword, bakeryId: bakery.id },
     });
     await db.user.create({
-      data: { email: "floor@artisanloaf.com", name: "Marcus Webb", role: UserRole.FLOOR_STAFF, password: demoPassword, bakeryId: bakery.id },
+      data: { id: "user_demo_floor", email: "floor@artisanloaf.com", name: "Marcus Webb", role: UserRole.FLOOR_STAFF, password: demoPassword, bakeryId: bakery.id },
     });
     await db.user.create({
-      data: { email: "purchasing@artisanloaf.com", name: "Priya Patel", role: UserRole.PURCHASING_MANAGER, password: demoPassword, bakeryId: bakery.id },
+      data: { id: "user_demo_purchasing", email: "purchasing@artisanloaf.com", name: "Priya Patel", role: UserRole.PURCHASING_MANAGER, password: demoPassword, bakeryId: bakery.id },
     });
 
     // Suppliers

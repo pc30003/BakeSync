@@ -29,17 +29,17 @@ async function main() {
   const headBaker = await prisma.user.upsert({
     where: { email: "head@artisanloaf.com" },
     update: { password: demoPassword },
-    create: { email: "head@artisanloaf.com", name: "Sarah Chen", role: UserRole.HEAD_BAKER, password: demoPassword, bakeryId: bakery.id },
+    create: { id: "user_demo_head", email: "head@artisanloaf.com", name: "Sarah Chen", role: UserRole.HEAD_BAKER, password: demoPassword, bakeryId: bakery.id },
   });
   const floorStaff = await prisma.user.upsert({
     where: { email: "floor@artisanloaf.com" },
     update: { password: demoPassword },
-    create: { email: "floor@artisanloaf.com", name: "Marcus Webb", role: UserRole.FLOOR_STAFF, password: demoPassword, bakeryId: bakery.id },
+    create: { id: "user_demo_floor", email: "floor@artisanloaf.com", name: "Marcus Webb", role: UserRole.FLOOR_STAFF, password: demoPassword, bakeryId: bakery.id },
   });
   const purchasingManager = await prisma.user.upsert({
     where: { email: "purchasing@artisanloaf.com" },
     update: { password: demoPassword },
-    create: { email: "purchasing@artisanloaf.com", name: "Priya Patel", role: UserRole.PURCHASING_MANAGER, password: demoPassword, bakeryId: bakery.id },
+    create: { id: "user_demo_purchasing", email: "purchasing@artisanloaf.com", name: "Priya Patel", role: UserRole.PURCHASING_MANAGER, password: demoPassword, bakeryId: bakery.id },
   });
   console.log(`✅ Users: ${[headBaker, floorStaff, purchasingManager].map(u => u.name).join(", ")}`);
 

@@ -82,14 +82,21 @@ export async function POST(req: NextRequest) {
       (a) => (a.details as { ingredientId?: string } | null)?.ingredientId === ingredient.id
     );
     if (recentOrder) {
-      const lastLeftStock = Number(
-        (recentOrder.details as { newStockGrams?: number })?.newStockGrams ?? 0
-      );
-      // Nothing consumed since the last order → true duplicate, block it.
-      if (currentStock >= lastLeftStock) {
-        return error(`${ingredient.name} was already ordered in the last few minutes — stock is restored.`, 409);
+      const raw = (recentOrder.details as { newStockGrams?: number })?.newStockGrams;
+      // Only treat this as a possible duplicate when the prior order actually
+      // recorded the stock level it left behind. If that value is missing
+      // (e.g. an older action shape, or a restock via a different route), we
+      // must NOT assume a duplicate — defaulting to 0 would make the check
+      // `currentStock >= 0` always true and wrongly block EVERY reorder,
+      // which is exactly what stopped low/critical items from being ordered.
+      if (typeof raw === "number" && Number.isFinite(raw)) {
+        // Nothing consumed since the last order → true duplicate, block it.
+        if (currentStock >= raw) {
+          return error(`${ingredient.name} was already ordered in the last few minutes — stock is restored.`, 409);
+        }
+        // else: stock dropped since (wastage/production) → allow the reorder.
       }
-      // else: stock dropped since (wastage/production) → allow the reorder.
+      // No reliable prior stock level → allow the order to proceed.
     }
 
     const newStock     = currentStock + orderGrams;
