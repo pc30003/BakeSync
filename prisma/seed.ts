@@ -94,6 +94,22 @@ async function main() {
   });
   console.log(`✅ Ingredients: 12 created`);
 
+  // Ingredient lots with near-term expiry so the FEFO / expiry monitor has
+  // real data to flag (kept in sync with app/api/demo/reset/route.ts).
+  const daysFromNow = (d: number) => {
+    const dt = new Date();
+    dt.setDate(dt.getDate() + d);
+    dt.setHours(12, 0, 0, 0);
+    return dt;
+  };
+  await prisma.ingredientLot.create({
+    data: { ingredientId: heavyCream.id, supplierId: dairySupplier.id, lotCode: "HC-2409", quantityGrams: 1500, expiryDate: daysFromNow(2), costPerKg: 4.50 },
+  });
+  await prisma.ingredientLot.create({
+    data: { ingredientId: mangoPuree.id, supplierId: generalSupplier.id, lotCode: "MP-2417", quantityGrams: 800, expiryDate: daysFromNow(1), costPerKg: 9.50 },
+  });
+  console.log(`✅ Ingredient lots: 2 created (near-term expiry for FEFO demo)`);
+
   // ── Recipes ──────────────────────────────────────────────────────────────
 
   // 1. Dark Chocolate Brownies (16 squares)
