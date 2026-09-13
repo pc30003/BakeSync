@@ -35,6 +35,14 @@ export async function POST(req: NextRequest) {
       include: { supplier: { select: { name: true, leadTimeDays: true } } },
     });
 
+    // Perishability signal — used purely as REASONING context so the AI can
+    // justify ordering conservatively for short-shelf-life items (dairy, fruit,
+    // fresh liquids) vs stable dry goods (flour, sugar, salt). We don't track
+    // physical lots/expiry; this is a category-based heuristic for judgement.
+    const PERISHABLE_CATEGORIES = ["DAIRY", "FRUIT", "LIQUID", "EGG"];
+    const perishabilityOf = (category: string) =>
+      PERISHABLE_CATEGORIES.includes(category) ? "perishable (short shelf life)" : "stable (long shelf life)";
+
     const upcomingOrders = await db.order.findMany({
       where: {
         bakeryId,
@@ -58,6 +66,7 @@ export async function POST(req: NextRequest) {
         supplier: i.supplier?.name ?? "No supplier",
         leadTimeDays: i.supplier?.leadTimeDays ?? 0,
         costPerKg: Number(i.costPerKg),
+        perishability: perishabilityOf(i.category),
       })),
       upcomingOrders: upcomingOrders.length,
       orderItems: upcomingOrders.flatMap(o => o.lineItems.map(li => ({
@@ -75,7 +84,7 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are BakeSync's procurement AI. Analyze stock levels, upcoming demand, and supplier lead times to recommend what to order NOW to avoid disruption. Be proactive — flag things that will run out BEFORE they hit critical. Return JSON: { "summary": "1-2 sentence overview", "recommendations": [{ "ingredient": "name", "urgency": "CRITICAL|HIGH|MEDIUM|LOW", "reason": "why order now", "suggestedQuantityKg": number, "estimatedCost": number, "supplier": "name", "leadTimeDays": number — the supplier's delivery lead time in days, copied from the provided context }], "riskAlert": "biggest supply risk in next 7 days" }. Do NOT invent calendar dates.`,
+          content: `You are BakeSync's procurement AI. Analyze stock levels, upcoming demand, supplier lead times, and each ingredient's PERISHABILITY to recommend what to order NOW to avoid disruption. Be proactive — flag things that will run out BEFORE they hit critical. IMPORTANT: factor perishability into your reasoning — for "perishable (short shelf life)" items (dairy, fruit, fresh liquids, eggs), recommend ordering closer to demand in smaller, more frequent quantities to avoid spoilage; for "stable (long shelf life)" items (flour, sugar, salt, chocolate), it's fine to order larger buffers. Mention the perishability rationale in the "reason" where relevant. Return JSON: { "summary": "1-2 sentence overview", "recommendations": [{ "ingredient": "name", "urgency": "CRITICAL|HIGH|MEDIUM|LOW", "reason": "why order now — include shelf-life reasoning where relevant", "suggestedQuantityKg": number, "estimatedCost": number, "supplier": "name", "leadTimeDays": number — the supplier's delivery lead time in days, copied from the provided context }], "riskAlert": "biggest supply risk in next 7 days" }. Do NOT invent calendar dates.`,
         },
         {
           role: "user",

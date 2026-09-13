@@ -142,23 +142,6 @@ async function runReset(req: NextRequest) {
       data: { bakeryId: bakery.id, name: "Fresh Lime Juice", category: IngredientCategory.FRUIT, unit: "ml", stockGrams: 500, reorderThresholdGrams: 200, criticalThresholdGrams: 50, costPerKg: 6.00, supplierId: generalSupplier.id, alertLevel: "OK" },
     });
 
-    // Ingredient lots with near-term expiry dates so the FEFO / expiry
-    // monitoring feature has real data to act on. The monitor flags any lot
-    // expiring within 3 days; these two give it a WARNING (2 days) and a
-    // CRITICAL (1 day) to surface when "Run monitor" is clicked.
-    const daysFromNow = (d: number) => {
-      const dt = new Date();
-      dt.setDate(dt.getDate() + d);
-      dt.setHours(12, 0, 0, 0);
-      return dt;
-    };
-    await db.ingredientLot.create({
-      data: { ingredientId: heavyCream.id, supplierId: dairySupplier.id, lotCode: "HC-2409", quantityGrams: 1500, expiryDate: daysFromNow(2), costPerKg: 4.50 },
-    });
-    await db.ingredientLot.create({
-      data: { ingredientId: mangoPuree.id, supplierId: generalSupplier.id, lotCode: "MP-2417", quantityGrams: 800, expiryDate: daysFromNow(1), costPerKg: 9.50 },
-    });
-
     // Recipes
     const brownieRecipe = await db.recipe.create({
       data: {
