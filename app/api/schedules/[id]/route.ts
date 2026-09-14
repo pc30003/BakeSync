@@ -156,8 +156,15 @@ export async function PATCH(
       });
     }
 
+    // Past this point we're handling the approve/revoke toggle. `approved` is
+    // optional in the schema (to allow a { close: true } request), so guard the
+    // case where neither a boolean nor close was actionable.
+    if (typeof parsed.data.approved !== "boolean") {
+      return error("Provide { approved: boolean } or { close: true }.", 422);
+    }
+
     // ── Approve ───────────────────────────────────────────────────────────
-    if (parsed.data.approved) {
+    if (parsed.data.approved === true) {
       if (existing.isApproved) {
         return error("Schedule is already approved.", 409);
       }
