@@ -24,8 +24,14 @@ import {
 } from "@/lib/api-helpers";
 import { computeAlertLevel } from "@/lib/stock-actions";
 
+// PATCH accepts EITHER an approve/revoke toggle { approved: boolean }
+// OR a close action { close: true }. Exactly one is acted on per request;
+// `close` takes precedence if both are somehow sent.
 const ApproveSchema = z.object({
-  approved: z.boolean(),
+  approved: z.boolean().optional(),
+  close:    z.literal(true).optional(),
+}).refine((d) => d.approved !== undefined || d.close === true, {
+  message: "Provide either { approved: boolean } or { close: true }.",
 });
 
 // ─── GET /api/schedules/[id] ──────────────────────────────────────────────────
@@ -94,6 +100,62 @@ export async function PATCH(
     });
     if (!existing) return notFound("Schedule");
 
+    // ── Close (finish the production run) ────────────────────────────────────
+    // Marks a fully-completed schedule as done and archives it. Stock stays
+    // deducted (the ingredients were really used to make the product) — this is
+    // the deliberate opposite of Revoke, which restores stock. A closed schedule
+    // drops out of the active view and appears under History.
+    if (parsed.data.close === true) {
+      if (existing.isClosed) {
+        return error("Schedule is already closed.", 409);
+      }
+      if (!existing.isApproved) {
+        return error("Only an approved schedule can be closed.", 409);
+      }
+
+      // Require every checklist item across every batch to be DONE (or SKIPPED)
+      // — you can't finish a run that hasn't actually been made.
+      const items = await db.checklistItem.findMany({
+        where:  { batch: { scheduleId: params.id } },
+        select: { status: true },
+      });
+      const allDone =
+        items.length > 0 &&
+        items.every((i) => i.status === "DONE" || i.status === "SKIPPED");
+      if (!allDone) {
+        return error("All checklist steps must be completed before closing the schedule.", 409);
+      }
+
+      const closed = await db.$transaction(async (tx) => {
+        // Ensure every batch reads COMPLETED for a clean history record.
+        await tx.productionBatch.updateMany({
+          where: { scheduleId: params.id },
+          data:  { status: "COMPLETED", actualEndTime: new Date() },
+        });
+        return tx.productionSchedule.update({
+          where: { id: params.id },
+          data:  { isClosed: true, closedAt: new Date() },
+        });
+      });
+
+      await db.agentAction.create({
+        data: {
+          bakeryId,
+          type:    "GENERATE_SCHEDULE",
+          status:  "COMPLETED",
+          summary: `Production run completed and archived by ${session!.user.name ?? session!.user.email}. Consumed stock retained.`,
+          details: { scheduleId: params.id, closedBy: session!.user.name, action: "close" },
+          requiresApproval: false,
+          completedAt:      new Date(),
+        },
+      });
+
+      return ok({
+        schedule: closed,
+        message:  "Production run completed. Ingredients used remain deducted; schedule moved to history.",
+      });
+    }
+
     // ── Approve ───────────────────────────────────────────────────────────
     if (parsed.data.approved) {
       if (existing.isApproved) {
@@ -131,6 +193,11 @@ export async function PATCH(
 
     // ── Revoke ─────────────────────────────────────────────────────────────
     } else {
+      // Guard: a closed (completed) run can't be revoked — its stock was really
+      // consumed, so restoring it would fabricate inventory.
+      if (existing.isClosed) {
+        return error("This schedule has been completed and archived; it can no longer be revoked.", 409);
+      }
       // Guard: if already not approved, nothing to revoke (prevents double-restore)
       if (!existing.isApproved) {
         return error("Schedule is not approved.", 409);

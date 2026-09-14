@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AgentLogPanel } from "@/components/schedule/agent-log-panel";
 import { ScheduleApproveButton } from "@/components/schedule/schedule-approve-button";
+import { ScheduleCloseButton } from "@/components/schedule/schedule-close-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
 import { startOfDay, endOfDay, format } from "date-fns";
@@ -24,10 +25,12 @@ export default async function SchedulePage() {
   const isHead   = session!.user.role === "HEAD_BAKER";
   const now      = new Date();
 
-  // Load today's schedule only
+  // Load today's ACTIVE schedule only. Closed (completed & archived) schedules
+  // drop out of this view — they live under History instead.
   const schedules = await db.productionSchedule.findMany({
     where: {
       bakeryId,
+      isClosed: false,
       scheduleDate: {
         gte: startOfDay(now),
         lte: endOfDay(now),
@@ -95,7 +98,15 @@ export default async function SchedulePage() {
           </CardContent>
         </Card>
       ) : (
-        schedules.map((schedule) => (
+        schedules.map((schedule) => {
+          // "All steps done" = there is at least one checklist item and every
+          // item across every batch is DONE. Drives whether the Close button
+          // is offered (Head Baker only, and only on an approved schedule).
+          const allItems = schedule.batches.flatMap((b) => b.checklist);
+          const allStepsDone =
+            allItems.length > 0 && allItems.every((c) => c.status === "DONE" || c.status === "SKIPPED");
+
+          return (
           <Card key={schedule.id}>
             <CardHeader>
               <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -126,6 +137,9 @@ export default async function SchedulePage() {
                       isApproved={schedule.isApproved}
                       approvedBy={schedule.approvedBy?.name}
                     />
+                  )}
+                  {isHead && schedule.isApproved && (
+                    <ScheduleCloseButton scheduleId={schedule.id} allStepsDone={allStepsDone} />
                   )}
                   {!isHead && (
                     <Badge variant={schedule.isApproved ? "success" : "warning"}>
@@ -219,7 +233,8 @@ export default async function SchedulePage() {
               )}
             </CardContent>
           </Card>
-        ))
+          );
+        })
       )}
     </div>
   );

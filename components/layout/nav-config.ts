@@ -41,6 +41,12 @@ export const NAV_SECTIONS: NavSection[] = [
         roles: ["FLOOR_STAFF"],
       },
       {
+        label: "Production History",
+        href:  "/dashboard/schedule/history",
+        icon:  "History",
+        roles: ["HEAD_BAKER"],
+      },
+      {
         label: "Recipes",
         href:  "/dashboard/recipes",
         icon:  "BookOpen",
