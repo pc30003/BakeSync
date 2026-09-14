@@ -127,11 +127,26 @@ export async function PATCH(
       }
 
       const closed = await db.$transaction(async (tx) => {
-        // Ensure every batch reads COMPLETED for a clean history record.
-        await tx.productionBatch.updateMany({
-          where: { scheduleId: params.id },
-          data:  { status: "COMPLETED", actualEndTime: new Date() },
+        // Mark batches COMPLETED only when they genuinely have checklist items
+        // that are all done — never force-complete a batch that has zero steps
+        // (it never actually ran). Empty-checklist batches keep their current
+        // status so History reflects reality.
+        const batches = await tx.productionBatch.findMany({
+          where:  { scheduleId: params.id },
+          select: { id: true, checklist: { select: { status: true } } },
         });
+        for (const b of batches) {
+          const items = b.checklist;
+          const trulyDone =
+            items.length > 0 &&
+            items.every((i) => i.status === "DONE" || i.status === "SKIPPED");
+          if (trulyDone) {
+            await tx.productionBatch.update({
+              where: { id: b.id },
+              data:  { status: "COMPLETED", actualEndTime: new Date() },
+            });
+          }
+        }
         return tx.productionSchedule.update({
           where: { id: params.id },
           data:  { isClosed: true, closedAt: new Date() },

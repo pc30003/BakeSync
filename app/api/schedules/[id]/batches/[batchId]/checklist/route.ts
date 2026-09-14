@@ -26,7 +26,7 @@ export async function PATCH(
     const item = await db.checklistItem.findFirst({
       where: { id: parsed.data.itemId, batchId: params.batchId },
       include: {
-        batch: { include: { schedule: { select: { isApproved: true, bakeryId: true } } } },
+        batch: { include: { schedule: { select: { isApproved: true, isClosed: true, bakeryId: true } } } },
         deductions: true,
       },
     });
@@ -40,6 +40,14 @@ export async function PATCH(
     // Don't allow ticking items on unapproved schedules
     if (!item.batch.schedule.isApproved) {
       return error("Schedule must be approved before checklist items can be updated", 403);
+    }
+
+    // Don't allow editing a completed & archived run. Its stock was really
+    // consumed; unticking here would restore stock on a finished run and break
+    // the close invariant. (Guards the race between a head-baker close and a
+    // floor tablet that hasn't refreshed yet.)
+    if (item.batch.schedule.isClosed) {
+      return error("This production run has been completed and archived; its checklist can no longer be changed.", 409);
     }
 
     // Enforce sequential order — all previous items must be DONE or SKIPPED

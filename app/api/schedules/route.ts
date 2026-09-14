@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
           scheduleDate: targetDate,
           shiftType,
           isApproved: true,
+          isClosed:   false,  // never hand back an archived run as the active schedule
         },
         include: {
           batches: {

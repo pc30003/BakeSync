@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         // ── Guard: return existing approved schedule ──────────────────────
         if (!forceRegenerate) {
           const existing = await db.productionSchedule.findFirst({
-            where: { bakeryId, scheduleDate: targetDate, shiftType, isApproved: true },
+            where: { bakeryId, scheduleDate: targetDate, shiftType, isApproved: true, isClosed: false },
           });
           if (existing) {
             emit("already_approved", {
