@@ -16,11 +16,15 @@ export default async function FloorStaffDashboard() {
   const bakeryId = session!.user.bakeryId;
   const now = new Date();
 
-  // Load today's approved schedule (by date).
+  // Load today's approved, still-active schedule (by date).
+  // isClosed:false — once a run is completed & archived it must drop off the
+  // floor view (its batches are force-marked COMPLETED on close, which would
+  // otherwise show staff a "COMPLETED" batch with unfinished steps).
   const todaySchedule = await db.productionSchedule.findFirst({
     where: {
       bakeryId,
       isApproved: true,
+      isClosed:   false,
       scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
     },
     include: {

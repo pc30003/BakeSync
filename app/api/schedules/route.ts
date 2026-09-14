@@ -41,7 +41,10 @@ export async function GET(req: NextRequest) {
     const schedules = await db.productionSchedule.findMany({
       where: {
         bakeryId: session!.user.bakeryId,
-        ...(approved === "true" && { isApproved: true }),
+        // "approved=true" means "active for staff": approved AND not yet closed.
+        // A closed (archived) run must not count as an active approved schedule,
+        // otherwise the floor ScheduleWatcher won't detect the close and refresh.
+        ...(approved === "true" && { isApproved: true, isClosed: false }),
         ...(from || to ? {
           scheduleDate: {
             ...(from && { gte: new Date(from) }),
