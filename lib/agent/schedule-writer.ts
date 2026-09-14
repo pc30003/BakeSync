@@ -30,30 +30,9 @@ export async function writeSchedule(
   const shortfalls: AgentRunResult["shortfalls"] = [];
 
   try {
-    // ── 0. Guard: never resurrect a completed & archived run ─────────────────
-    // Schedules are unique per (bakery, date, shift), so regenerating the same
-    // slot reuses the SAME row. If that row was already completed & archived
-    // (isClosed), the upsert below would flip it back to active — silently
-    // pulling a finished run out of History and corrupting it. A closed run is
-    // a permanent record: refuse to overwrite it. (Active/unapproved schedules
-    // regenerate freely, as before.)
-    const existingForSlot = await db.productionSchedule.findUnique({
-      where: {
-        bakeryId_scheduleDate_shiftType: {
-          bakeryId,
-          scheduleDate,
-          shiftType: shiftType as any,
-        },
-      },
-      select: { isClosed: true },
-    });
-    if (existingForSlot?.isClosed) {
-      throw new Error(
-        "This shift has already been completed and archived for today. It's kept in Production History and can't be regenerated."
-      );
-    }
-
     // ── 1. Upsert the ProductionSchedule ────────────────────────────────────
+    // Completed runs are snapshotted to ProductionRunHistory and their live row
+    // is deleted on close, so the (date, shift) slot is always free to (re)use.
     const schedule = await db.productionSchedule.upsert({
       where: {
         bakeryId_scheduleDate_shiftType: {

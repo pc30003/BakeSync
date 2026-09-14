@@ -8,9 +8,8 @@ import { ScheduleApproveButton } from "@/components/schedule/schedule-approve-bu
 import { ScheduleCloseButton } from "@/components/schedule/schedule-close-button";
 import { AutoRefresh } from "@/components/ui/auto-refresh";
 import { formatDate, formatTime, getBatchStatusColor } from "@/lib/utils";
-import Link from "next/link";
 import { startOfDay, endOfDay, format } from "date-fns";
-import { CalendarDays, Clock, CheckCircle2 } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
 
 export const metadata: Metadata = { title: "Production Schedule" };
 
@@ -57,20 +56,6 @@ export default async function SchedulePage() {
       s.shiftType === DEFAULT_SHIFT
   );
 
-  // Has today's default shift already been completed & archived? If so we show
-  // a clear "completed" state instead of the generate panel, so the page never
-  // contradicts itself ("already has a schedule" vs "no schedules yet").
-  const todayClosed = await db.productionSchedule.findFirst({
-    where: {
-      bakeryId,
-      isClosed:     true,
-      shiftType:    DEFAULT_SHIFT,
-      scheduleDate: { gte: startOfDay(now), lte: endOfDay(now) },
-    },
-    select: { id: true },
-  });
-  const shiftAlreadyClosed = !!todayClosed && !todaySchedule;
-
   return (
     <div className="space-y-6">
       {/* Keeps batch progress bars live for the Head Baker without a manual refresh */}
@@ -88,43 +73,17 @@ export default async function SchedulePage() {
         </div>
       </div>
 
-      {/* ── Today's shift already completed & archived ──────────────────── */}
-      {shiftAlreadyClosed ? (
-        <Card className="border-green-200 bg-green-50/60 dark:border-green-900/50 dark:bg-green-950/20">
-          <CardContent className="py-8 text-center space-y-2">
-            <CheckCircle2 className="w-9 h-9 mx-auto text-green-600 dark:text-green-300" />
-            <p className="text-base font-bold text-green-800 dark:text-green-200">
-              Today's {DEFAULT_SHIFT.toLowerCase()} shift is complete
-            </p>
-            <p className="text-sm text-green-700 dark:text-green-300">
-              The production run has been finished and archived. Ingredients used remain deducted.
-            </p>
-            {isHead && (
-              <Link
-                href="/dashboard/schedule/history"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-green-800 dark:text-green-200 underline underline-offset-2 mt-1"
-              >
-                View in Production History
-              </Link>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        /* ── Agent trigger panel (HEAD_BAKER only) ───────────────────────── */
-        isHead && (
-          <AgentLogPanel
-            scheduleDate={todayStr}
-            shiftType={DEFAULT_SHIFT}
-            hasExisting={!!todaySchedule}
-          />
-        )
+      {/* ── Agent trigger panel (HEAD_BAKER only) ───────────────────────── */}
+      {isHead && (
+        <AgentLogPanel
+          scheduleDate={todayStr}
+          shiftType={DEFAULT_SHIFT}
+          hasExisting={!!todaySchedule}
+        />
       )}
 
       {/* ── Schedule cards ───────────────────────────────────────────────── */}
-      {/* Hide the "no schedules" card when the shift is already closed — the
-          green "shift complete" banner above already explains the state. */}
       {schedules.length === 0 ? (
-        shiftAlreadyClosed ? null : (
         <Card>
           <CardContent className="py-12 text-center space-y-2">
             <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground/30" />
@@ -138,7 +97,6 @@ export default async function SchedulePage() {
             )}
           </CardContent>
         </Card>
-        )
       ) : (
         schedules.map((schedule) => {
           // "All steps done" = there is at least one checklist item and every

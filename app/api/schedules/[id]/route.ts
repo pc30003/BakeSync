@@ -85,6 +85,7 @@ export async function PATCH(
     const existing = await db.productionSchedule.findFirst({
       where: { id: params.id, bakeryId },
       include: {
+        approvedBy: { select: { name: true } },
         batches: {
           include: {
             recipe: {
@@ -101,14 +102,12 @@ export async function PATCH(
     if (!existing) return notFound("Schedule");
 
     // ── Close (finish the production run) ────────────────────────────────────
-    // Marks a fully-completed schedule as done and archives it. Stock stays
-    // deducted (the ingredients were really used to make the product) — this is
-    // the deliberate opposite of Revoke, which restores stock. A closed schedule
-    // drops out of the active view and appears under History.
+    // Snapshots the finished run into the immutable ProductionRunHistory archive,
+    // then DELETES the live schedule row — which frees the (date, shift) slot so
+    // the shift can be run again, and lets completed runs STACK in History.
+    // Stock is NOT restored (the ingredients were really consumed) — the
+    // deliberate opposite of Revoke.
     if (parsed.data.close === true) {
-      if (existing.isClosed) {
-        return error("Schedule is already closed.", 409);
-      }
       if (!existing.isApproved) {
         return error("Only an approved schedule can be closed.", 409);
       }
@@ -126,31 +125,37 @@ export async function PATCH(
         return error("All checklist steps must be completed before closing the schedule.", 409);
       }
 
-      const closed = await db.$transaction(async (tx) => {
-        // Mark batches COMPLETED only when they genuinely have checklist items
-        // that are all done — never force-complete a batch that has zero steps
-        // (it never actually ran). Empty-checklist batches keep their current
-        // status so History reflects reality.
-        const batches = await tx.productionBatch.findMany({
-          where:  { scheduleId: params.id },
-          select: { id: true, checklist: { select: { status: true } } },
+      await db.$transaction(async (tx) => {
+        // 1. Snapshot the run into the immutable history archive (denormalised
+        //    text — survives deletion of the live schedule/recipe).
+        await tx.productionRunHistory.create({
+          data: {
+            bakeryId,
+            scheduleDate:           existing.scheduleDate,
+            shiftType:              existing.shiftType,
+            aiNotes:                existing.aiNotes,
+            approvedByName:         existing.approvedBy?.name ?? null,
+            closedByName:           session!.user.name ?? session!.user.email ?? null,
+            ovenUtilizationPercent: existing.totalOvenUtilizationPercent,
+            batchCount:             existing.batches.length,
+            closedAt:               new Date(),
+            batches: {
+              create: existing.batches.map((b) => ({
+                recipeName:       b.recipe.name,
+                recipeCategory:   String(b.recipe.category),
+                quantity:         b.quantity,
+                scaleFactor:      b.scaleFactor,
+                plannedStartTime: b.plannedStartTime,
+                plannedEndTime:   b.plannedEndTime,
+              })),
+            },
+          },
         });
-        for (const b of batches) {
-          const items = b.checklist;
-          const trulyDone =
-            items.length > 0 &&
-            items.every((i) => i.status === "DONE" || i.status === "SKIPPED");
-          if (trulyDone) {
-            await tx.productionBatch.update({
-              where: { id: b.id },
-              data:  { status: "COMPLETED", actualEndTime: new Date() },
-            });
-          }
-        }
-        return tx.productionSchedule.update({
-          where: { id: params.id },
-          data:  { isClosed: true, closedAt: new Date() },
-        });
+
+        // 2. Delete the live schedule (cascades to batches + checklist items).
+        //    Stock stays as-is — nothing is restored. The (date,shift) slot is
+        //    now free, so the shift can be generated again.
+        await tx.productionSchedule.delete({ where: { id: params.id } });
       });
 
       await db.agentAction.create({
@@ -159,15 +164,15 @@ export async function PATCH(
           type:    "GENERATE_SCHEDULE",
           status:  "COMPLETED",
           summary: `Production run completed and archived by ${session!.user.name ?? session!.user.email}. Consumed stock retained.`,
-          details: { scheduleId: params.id, closedBy: session!.user.name, action: "close" },
+          details: { scheduleDate: existing.scheduleDate.toISOString(), closedBy: session!.user.name, action: "close" },
           requiresApproval: false,
           completedAt:      new Date(),
         },
       });
 
       return ok({
-        schedule: closed,
-        message:  "Production run completed. Ingredients used remain deducted; schedule moved to history.",
+        archived: true,
+        message:  "Production run completed and archived. Ingredients used remain deducted; the shift can be scheduled again.",
       });
     }
 
@@ -215,11 +220,6 @@ export async function PATCH(
 
     // ── Revoke ─────────────────────────────────────────────────────────────
     } else {
-      // Guard: a closed (completed) run can't be revoked — its stock was really
-      // consumed, so restoring it would fabricate inventory.
-      if (existing.isClosed) {
-        return error("This schedule has been completed and archived; it can no longer be revoked.", 409);
-      }
       // Guard: if already not approved, nothing to revoke (prevents double-restore)
       if (!existing.isApproved) {
         return error("Schedule is not approved.", 409);

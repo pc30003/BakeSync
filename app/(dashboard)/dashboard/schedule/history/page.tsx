@@ -22,14 +22,13 @@ export default async function ProductionHistoryPage() {
   }
   const bakeryId = session!.user.bakeryId;
 
-  const schedules = await db.productionSchedule.findMany({
-    where: { bakeryId, isClosed: true },
+  // Read from the immutable run-history archive. These are snapshots created
+  // when a run is completed & archived — they stack (no one-per-slot limit) and
+  // survive schedule/recipe deletion because the fields are denormalised copies.
+  const runs = await db.productionRunHistory.findMany({
+    where: { bakeryId },
     include: {
-      batches: {
-        include: { recipe: { select: { name: true, category: true } } },
-        orderBy: { plannedStartTime: "asc" },
-      },
-      approvedBy: { select: { name: true } },
+      batches: { orderBy: { plannedStartTime: "asc" } },
     },
     orderBy: { closedAt: "desc" },
   });
@@ -41,38 +40,34 @@ export default async function ProductionHistoryPage() {
         description="Completed and archived production runs. Ingredients used remain deducted from stock."
       />
 
-      {schedules.length === 0 ? (
+      {runs.length === 0 ? (
         <EmptyState
           icon={<History className="w-6 h-6" />}
           title="No completed runs yet"
           description="When a Head Baker completes and archives a production run from the schedule, it appears here."
         />
       ) : (
-        schedules.map((schedule) => (
-          <Card key={schedule.id}>
+        runs.map((run) => (
+          <Card key={run.id}>
             <CardHeader>
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                   <CardTitle>
-                    {formatDate(schedule.scheduleDate)} — {schedule.shiftType} Shift
+                    {formatDate(run.scheduleDate)} — {run.shiftType} Shift
                   </CardTitle>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span>{schedule.batches.length} batch{schedule.batches.length !== 1 ? "es" : ""}</span>
-                    {schedule.approvedBy?.name && (
+                    <span>{run.batchCount} batch{run.batchCount !== 1 ? "es" : ""}</span>
+                    {run.approvedByName && (
                       <>
                         <span>·</span>
-                        <span>Approved by {schedule.approvedBy.name}</span>
+                        <span>Approved by {run.approvedByName}</span>
                       </>
                     )}
-                    {schedule.closedAt && (
-                      <>
-                        <span>·</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" aria-hidden="true" />
-                          Completed {formatDateTime(schedule.closedAt)}
-                        </span>
-                      </>
-                    )}
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" aria-hidden="true" />
+                      Completed {formatDateTime(run.closedAt)}
+                    </span>
                   </div>
                 </div>
                 <Badge variant="success" className="flex items-center gap-1">
@@ -83,18 +78,18 @@ export default async function ProductionHistoryPage() {
             </CardHeader>
 
             <CardContent className="p-0">
-              {schedule.batches.length === 0 ? (
+              {run.batches.length === 0 ? (
                 <p className="px-5 py-4 text-sm text-muted-foreground">No batches recorded.</p>
               ) : (
                 <ul className="divide-y divide-border" role="list">
-                  {schedule.batches.map((batch) => (
+                  {run.batches.map((batch) => (
                     <li key={batch.id} className="px-5 py-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-medium text-sm">{batch.recipe.name}</p>
+                            <p className="font-medium text-sm">{batch.recipeName}</p>
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
-                              {batch.recipe.category}
+                              {batch.recipeCategory}
                             </span>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground flex-wrap">

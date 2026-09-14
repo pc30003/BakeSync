@@ -54,6 +54,10 @@ async function runReset(req: NextRequest) {
     await db.checklistItem.deleteMany({ where: { batch: { schedule: { bakeryId: "bakery_demo" } } } });
     await db.productionBatch.deleteMany({ where: { schedule: { bakeryId: "bakery_demo" } } });
     await db.productionSchedule.deleteMany({ where: { bakeryId: "bakery_demo" } });
+    // Run-history batches cascade from their parent, but delete explicitly for a
+    // clean, order-independent wipe (History starts empty each reset).
+    await db.productionRunHistoryBatch.deleteMany({ where: { runHistory: { bakeryId: "bakery_demo" } } });
+    await db.productionRunHistory.deleteMany({ where: { bakeryId: "bakery_demo" } });
     await db.agentAlert.deleteMany({ where: { bakeryId: "bakery_demo" } });
     await db.agentAction.deleteMany({ where: { bakeryId: "bakery_demo" } });
     await db.taskQueue.deleteMany({ where: { bakeryId: "bakery_demo" } });

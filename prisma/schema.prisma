@@ -46,6 +46,7 @@ model Bakery {
   suppliers                Supplier[]
   orders                   Order[]
   productionSchedules      ProductionSchedule[]
+  productionRunHistory     ProductionRunHistory[]
   agentActions             AgentAction[]
   agentAlerts              AgentAlert[]
   procurementRecommendations ProcurementRecommendation[]
@@ -506,6 +507,51 @@ model ProductionBatch {
 
   @@index([scheduleId])
   @@map("production_batches")
+}
+
+// ─────────────────────────────────────────────
+// PRODUCTION RUN HISTORY (immutable archive)
+// ─────────────────────────────────────────────
+// A completed production run is SNAPSHOTTED here on close, then its live
+// ProductionSchedule row is deleted (freeing the date+shift slot so the shift
+// can be run again). These rows are denormalised on purpose — they hold text
+// copies (recipe names, approver name) rather than foreign keys — so a run's
+// history survives even after the schedule/recipe/user is gone. No unique
+// constraint, so completed runs STACK. Only bakeryId is a real relation, for
+// multi-tenancy and cascade cleanup on demo reset.
+model ProductionRunHistory {
+  id               String    @id @default(cuid())
+  bakeryId         String
+  scheduleDate     DateTime  @db.Date
+  shiftType        ShiftType
+  aiNotes          String?   @db.Text
+  approvedByName   String?
+  closedByName     String?
+  ovenUtilizationPercent Decimal @default(0) @db.Decimal(5, 2)
+  batchCount       Int       @default(0)
+  closedAt         DateTime  @default(now())
+
+  bakery  Bakery                       @relation(fields: [bakeryId], references: [id], onDelete: Cascade)
+  batches ProductionRunHistoryBatch[]
+
+  @@index([bakeryId, closedAt])
+  @@map("production_run_history")
+}
+
+model ProductionRunHistoryBatch {
+  id             String   @id @default(cuid())
+  runHistoryId   String
+  recipeName     String
+  recipeCategory String
+  quantity       Int
+  scaleFactor    Decimal  @db.Decimal(8, 3)
+  plannedStartTime DateTime
+  plannedEndTime   DateTime
+
+  runHistory ProductionRunHistory @relation(fields: [runHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([runHistoryId])
+  @@map("production_run_history_batches")
 }
 
 model BatchStaffAssignment {
