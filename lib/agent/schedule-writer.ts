@@ -73,6 +73,21 @@ export async function writeSchedule(
       recipeMap.set(r.name.toLowerCase(), r.recipeId);
     }
 
+    // ── STOCK-FEASIBILITY GUARDRAIL ──────────────────────────────────────────
+    // The AI is *told* to scale down for low stock, but that's a soft instruction
+    // and not guaranteed. Here we ENFORCE it deterministically: we track the real
+    // remaining stock of every ingredient and, per batch (in plan order), clamp
+    // the batch's scaleFactor/quantity down to what stock can actually cover —
+    // accounting for the recipe's wastage buffer and for earlier batches in the
+    // same run that already consumed shared ingredients. This makes it impossible
+    // for a generated plan to schedule more than physically exists.
+    const remainingStock = new Map<string, number>();
+    for (const s of context.stockLevels) {
+      remainingStock.set(s.ingredientId, Number(s.stockGrams));
+    }
+    // Collect deterministic (real-stock) shortfalls detected by the clamp.
+    const stockShortfalls: AgentRunResult["shortfalls"] = [];
+
     // ── 2. Create batches + checklists ───────────────────────────────────────
     for (const batch of plan.batches) {
       // Resolve recipe ID — AI might return the actual ID or the recipe name
@@ -85,24 +100,83 @@ export async function writeSchedule(
         continue;
       }
 
+      // Get the recipe's ingredients (needed for the feasibility clamp below)
+      const recipeData = context.recipes.find((r) => r.recipeId === resolvedRecipeId);
+      const recipeIngredients = recipeData?.ingredients ?? [];
+      const wastageMult = 1 + (Number(recipeData?.wastageBufferPercent ?? 0) / 100);
+
+      const aiScale = Number(batch.scaleFactor) || 1;
+      const aiQty   = Math.round(batch.quantity);
+
+      // Max scale each ingredient's remaining stock can support (per-unit need
+      // includes the wastage buffer). Ingredients with base 0 are unconstrained.
+      let feasibleScale = aiScale;
+      let limitingName: string | null = null;
+      for (const ri of recipeIngredients) {
+        const perUnit = ri.quantityGrams * wastageMult;
+        if (perUnit <= 0) continue;
+        const have = remainingStock.get(ri.ingredientId) ?? 0;
+        const maxScaleForIng = have / perUnit;
+        if (maxScaleForIng < feasibleScale) {
+          feasibleScale = maxScaleForIng;
+          limitingName  = ri.name;
+        }
+      }
+      // Clamp to [0, aiScale]; round down to 3 dp (schema is Decimal(8,3)).
+      feasibleScale = Math.max(0, Math.min(aiScale, Math.floor(feasibleScale * 1000) / 1000));
+
+      // If the plan wanted more than stock allows, record the real shortfall
+      // (what the AI intended to make minus what stock can actually cover) for
+      // the limiting ingredient(s), so procurement is raised for the real gap.
+      if (feasibleScale < aiScale) {
+        for (const ri of recipeIngredients) {
+          const perUnit  = ri.quantityGrams * wastageMult;
+          if (perUnit <= 0) continue;
+          const wanted   = perUnit * aiScale;
+          const have     = remainingStock.get(ri.ingredientId) ?? 0;
+          const gap      = Math.round((wanted - have) * 10) / 10;
+          if (gap > 0.05) {
+            stockShortfalls.push({
+              ingredientId:   ri.ingredientId,
+              ingredientName: ri.name,
+              shortfallGrams: gap,
+              urgency:        "HIGH",
+            });
+          }
+        }
+      }
+
+      // Apply the clamp to the batch the AI proposed.
+      const clampRatio = aiScale > 0 ? feasibleScale / aiScale : 0;
+      const scale      = feasibleScale;
+      const clampedQty = Math.max(0, Math.round(aiQty * clampRatio));
+
+      // Nothing can be made with current stock → skip this batch entirely,
+      // but the shortfall above is already recorded so procurement fires.
+      if (scale <= 0 || clampedQty <= 0) {
+        continue;
+      }
+
+      // Decrement remaining stock by what this (clamped) batch will consume so
+      // later batches sharing an ingredient see the depleted amount.
+      for (const ri of recipeIngredients) {
+        const consumed = ri.quantityGrams * wastageMult * scale;
+        remainingStock.set(ri.ingredientId, (remainingStock.get(ri.ingredientId) ?? 0) - consumed);
+      }
+
       const createdBatch = await db.productionBatch.create({
         data: {
           scheduleId:       schedule.id,
           recipeId:         resolvedRecipeId,
           shiftType:        shiftType as any,
           status:           "SCHEDULED",
-          quantity:         Math.round(batch.quantity),
-          scaleFactor:      batch.scaleFactor,
+          quantity:         clampedQty,
+          scaleFactor:      scale,
           plannedStartTime: new Date(batch.plannedStartTime),
           plannedEndTime:   new Date(batch.plannedEndTime),
           ovenSlots:        batch.ovenSlots,
         },
       });
-
-      // Get the recipe's ingredients so we can auto-attach deductions by name-matching
-      const recipeData = context.recipes.find((r) => r.recipeId === resolvedRecipeId);
-      const recipeIngredients = recipeData?.ingredients ?? [];
-      const scale = Number(batch.scaleFactor) || 1;
 
       const steps = batch.checklistSteps ?? [];
       const stepDescriptions = steps.map((s) => typeof s === "string" ? s : s.description);
@@ -266,7 +340,11 @@ export async function writeSchedule(
     }
 
     // ── 4. Deduplicate shortfalls and create ProcurementRecommendations ──────
-    const uniqueShortfalls = deduplicateShortfalls(shortfalls);
+    // Merge the AI-reported shortfalls with the deterministic ones the stock
+    // guardrail detected (the real gap between what was planned and what stock
+    // could cover), so procurement is raised for actual shortfalls, not just
+    // whatever the AI happened to report.
+    const uniqueShortfalls = deduplicateShortfalls([...shortfalls, ...stockShortfalls]);
 
     for (const s of uniqueShortfalls) {
       const ingredient = await db.ingredient.findUnique({
